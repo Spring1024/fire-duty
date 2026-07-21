@@ -158,7 +158,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { useDeviceStore } from '@/stores/device'
+import { createDeviceAPI, importDevicesAPI } from '@/api/device'
+
+const deviceStore = useDeviceStore()
 
 // ---------- Tree Data ----------
 const treeFilter = ref('')
@@ -169,166 +174,39 @@ const treeProps = {
   label: 'label',
 }
 
-const buildingTree = [
-  {
-    id: 'root',
-    label: '未来科技产业园',
-    count: 568,
-    children: [
-      {
-        id: 'building-a',
-        label: 'A栋',
-        count: 180,
-        children: [
-          { id: 'a-1', label: '1层', count: 32 },
-          { id: 'a-2', label: '2层', count: 28 },
-          { id: 'a-3', label: '3层', count: 35 },
-          { id: 'a-4', label: '4层', count: 30 },
-          { id: 'a-5', label: '5层', count: 25 },
-          { id: 'a-6', label: '6层', count: 30 },
-        ],
-      },
-      {
-        id: 'building-b',
-        label: 'B栋',
-        count: 205,
-        children: [
-          { id: 'b-1', label: '1层', count: 40 },
-          { id: 'b-2', label: '2层', count: 35 },
-          { id: 'b-3', label: '3层', count: 38 },
-          { id: 'b-4', label: '4层', count: 32 },
-          { id: 'b-5', label: '5层', count: 30 },
-          { id: 'b-6', label: '6层', count: 30 },
-        ],
-      },
-      {
-        id: 'building-c',
-        label: 'C栋',
-        count: 183,
-        children: [
-          { id: 'c-1', label: '1层', count: 35 },
-          { id: 'c-2', label: '2层', count: 30 },
-          { id: 'c-3', label: '3层', count: 32 },
-          { id: 'c-4', label: '4层', count: 28 },
-          { id: 'c-5', label: '5层', count: 28 },
-          { id: 'c-6', label: '6层', count: 30 },
-        ],
-      },
-    ],
-  },
-]
+const buildingTree = computed(() => deviceStore.treeData)
 
 const currentBuilding = ref('')
 
 function filterNode(value, data) {
-  if (!value) return true
-  return data.label.includes(value)
+  if (!value) return data
+  return data.label && data.label.includes(value)
 }
 
 function handleNodeClick(data) {
-  currentBuilding.value = data.label
+  currentBuilding.value = data.label || ''
+  // If the node has a gridId, filter devices by it
+  const params = {}
+  if (data.gridId) {
+    params.gridId = data.gridId
+  }
+  if (searchQuery.value.trim()) {
+    params.keyword = searchQuery.value.trim()
+  }
+  deviceStore.fetchDevices(params)
 }
 
 // ---------- Device Table Data ----------
 const searchQuery = ref('')
-const loading = ref(false)
+const loading = computed(() => deviceStore.loading)
 
-const deviceList = ref([
-  {
-    code: 'EXT-001',
-    name: '3层走廊灭火器',
-    type: '灭火器',
-    location: 'A栋-3层',
-    status: '正常',
-    lastCheck: '2026-07-10',
-    manufacturer: '中消安科',
-    installDate: '2025-03-15',
-    lastMaintenance: '2026-06-15',
-  },
-  {
-    code: 'HYD-008',
-    name: '东侧消火栓',
-    type: '消火栓',
-    location: 'A栋-1层',
-    status: '正常',
-    lastCheck: '2026-07-09',
-    manufacturer: '天广消防',
-    installDate: '2025-01-20',
-    lastMaintenance: '2026-06-20',
-  },
-  {
-    code: 'SEN-023',
-    name: 'B栋烟感',
-    type: '烟感',
-    location: 'B栋-3层',
-    status: '故障',
-    lastCheck: '2026-07-08',
-    manufacturer: '泰和安',
-    installDate: '2025-06-10',
-    lastMaintenance: '2026-05-12',
-  },
-  {
-    code: 'SPR-015',
-    name: '地下车库喷淋',
-    type: '喷淋',
-    location: 'B1层',
-    status: '正常',
-    lastCheck: '2026-07-07',
-    manufacturer: '瑞泰消防',
-    installDate: '2025-02-28',
-    lastMaintenance: '2026-06-28',
-  },
-  {
-    code: 'EXT-003',
-    name: '大厅灭火器',
-    type: '灭火器',
-    location: 'A栋-1层',
-    status: '正常',
-    lastCheck: '2026-07-06',
-    manufacturer: '中消安科',
-    installDate: '2025-03-15',
-    lastMaintenance: '2026-06-15',
-  },
-  {
-    code: 'HYD-012',
-    name: '西侧消火栓',
-    type: '消火栓',
-    location: 'C栋-2层',
-    status: '正常',
-    lastCheck: '2026-07-05',
-    manufacturer: '天广消防',
-    installDate: '2025-04-10',
-    lastMaintenance: '2026-06-10',
-  },
-  {
-    code: 'SEN-031',
-    name: 'C栋温感',
-    type: '烟感',
-    location: 'C栋-5层',
-    status: '正常',
-    lastCheck: '2026-07-04',
-    manufacturer: '泰和安',
-    installDate: '2025-06-10',
-    lastMaintenance: '2026-05-20',
-  },
-  {
-    code: 'SPR-022',
-    name: 'A栋车库喷淋',
-    type: '喷淋',
-    location: 'A栋-B1层',
-    status: '正常',
-    lastCheck: '2026-07-03',
-    manufacturer: '瑞泰消防',
-    installDate: '2025-02-28',
-    lastMaintenance: '2026-06-28',
-  },
-])
+const deviceList = computed(() => deviceStore.deviceList)
 
 const filteredDeviceList = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
   if (!query) return deviceList.value
   return deviceList.value.filter(
-    (d) => d.code.toLowerCase().includes(query) || d.name.toLowerCase().includes(query)
+    (d) => (d.code && d.code.toLowerCase().includes(query)) || (d.name && d.name.toLowerCase().includes(query))
   )
 })
 
@@ -358,15 +236,46 @@ function statusColor(status) {
 
 // ---------- Actions ----------
 function handleSearch() {
-  // table is already filtered via computed
+  const params = {}
+  if (searchQuery.value.trim()) {
+    params.keyword = searchQuery.value.trim()
+  }
+  if (currentBuilding.value && currentBuilding.value !== '全部') {
+    params.location = currentBuilding.value
+  }
+  deviceStore.fetchDevices(params)
 }
 
-function handleImport() {
-  ElMessage.info('导入功能开发中')
+async function handleImport() {
+  // Create a file input element
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.xlsx,.xls,.csv'
+  input.onchange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    try {
+      await deviceStore.importDevices(file)
+      ElMessage.success('导入成功')
+      deviceStore.fetchDevices()
+    } catch (err) {
+      ElMessage.error('导入失败')
+    }
+  }
+  input.click()
 }
 
-function handleAddDevice() {
-  ElMessage.info('新增设备功能开发中')
+async function handleAddDevice() {
+  // A simple prompt-style add — in production this would open a dialog
+  ElMessage.info('新增设备功能 — 可通过 /devices POST 接口提交')
+  // Example of how to call the API:
+  // try {
+  //   await deviceStore.createDevice({ name: '...', type: '...', ... })
+  //   ElMessage.success('设备创建成功')
+  //   deviceStore.fetchDevices()
+  // } catch (err) {
+  //   ElMessage.error('设备创建失败')
+  // }
 }
 
 // ---------- Drawer ----------
@@ -382,6 +291,12 @@ function viewDetail(row) {
   currentDevice.value = row
   drawerVisible.value = true
 }
+
+// ---------- Lifecycle ----------
+onMounted(() => {
+  deviceStore.fetchDevices()
+  deviceStore.fetchTree()
+})
 </script>
 
 <style scoped>

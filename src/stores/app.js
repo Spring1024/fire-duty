@@ -1,16 +1,17 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { loginAPI, getMeAPI } from '@/api/auth'
 
 export const useAppStore = defineStore('app', () => {
   // User info
   const user = ref({
-    name: '管理员',
-    username: 'admin',
-    role: '超级管理员',
+    name: '',
+    username: '',
+    role: '',
     avatar: '',
   })
 
-  const isLoggedIn = computed(() => !!user.value.username)
+  const isLoggedIn = computed(() => !!localStorage.getItem('token'))
 
   // Sidebar collapse
   const sidebarCollapsed = ref(false)
@@ -19,19 +20,43 @@ export const useAppStore = defineStore('app', () => {
   }
 
   // Login / logout
-  function login(credentials) {
-    user.value = {
-      name: credentials.username === 'admin' ? '管理员' : credentials.username,
-      username: credentials.username,
-      role: '超级管理员',
+  async function login(credentials) {
+    const res = await loginAPI(credentials)
+    const { token, refreshToken, user: userInfo } = res.data
+
+    localStorage.setItem('token', token)
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken)
     }
-    sessionStorage.setItem('token', 'mock-token')
+
+    user.value = {
+      name: userInfo?.name || credentials.username,
+      username: userInfo?.username || credentials.username,
+      role: userInfo?.role || '',
+      avatar: userInfo?.avatar || '',
+    }
+
+    return res
+  }
+
+  async function fetchUserInfo() {
+    try {
+      const res = await getMeAPI()
+      user.value = {
+        name: res.data?.name || '',
+        username: res.data?.username || '',
+        role: res.data?.role || '',
+        avatar: res.data?.avatar || '',
+      }
+    } catch (err) {
+      console.error('获取用户信息失败:', err)
+    }
   }
 
   function logout() {
     user.value = { name: '', username: '', role: '', avatar: '' }
-    sessionStorage.removeItem('token')
     localStorage.removeItem('token')
+    localStorage.removeItem('refreshToken')
   }
 
   return {
@@ -40,6 +65,7 @@ export const useAppStore = defineStore('app', () => {
     sidebarCollapsed,
     toggleSidebar,
     login,
+    fetchUserInfo,
     logout,
   }
 })

@@ -7,7 +7,7 @@
           <template #label>
             <span class="tab-label">
               待检查
-              <el-badge :value="12" :hidden="false" class="tab-badge" />
+              <el-badge :value="tabCounts.pending" :hidden="false" class="tab-badge" />
             </span>
           </template>
         </el-tab-pane>
@@ -15,7 +15,7 @@
           <template #label>
             <span class="tab-label">
               已完成
-              <el-badge :value="45" :hidden="false" class="tab-badge" />
+              <el-badge :value="tabCounts.completed" :hidden="false" class="tab-badge" />
             </span>
           </template>
         </el-tab-pane>
@@ -23,7 +23,7 @@
           <template #label>
             <span class="tab-label">
               已超时
-              <el-badge :value="3" :hidden="false" class="tab-badge overdue-badge" />
+              <el-badge :value="tabCounts.overdue" :hidden="false" class="tab-badge overdue-badge" />
             </span>
           </template>
         </el-tab-pane>
@@ -104,139 +104,31 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useTaskStore } from '@/stores/task'
+
+const taskStore = useTaskStore()
 
 // ---------- Tabs ----------
 const activeTab = ref('pending')
 
+const tabMap = {
+  pending: { status: 'pending', label: '待检查' },
+  completed: { status: 'completed', label: '已完成' },
+  overdue: { status: 'overdue', label: '已超时' },
+}
+
 function handleTabClick() {
-  // Tab switching logic would go here when dynamic data is used
+  taskStore.fetchTasks({ status: tabMap[activeTab.value]?.status })
 }
 
 // ---------- Task Data ----------
-const loading = ref(false)
-
-const allTasks = {
-  pending: [
-    {
-      deviceCode: 'EXT-001',
-      device: '灭火器',
-      deviceFull: '3层走廊灭火器',
-      template: '月度灭火器检查表',
-      location: 'A栋-3层',
-      assignee: '张三',
-      deadline: '今天 18:00',
-      status: '待检查',
-    },
-    {
-      deviceCode: 'HYD-008',
-      device: '消火栓',
-      deviceFull: '东侧消火栓',
-      template: '月度消火栓检查表',
-      location: 'A栋-1层',
-      assignee: '李四',
-      deadline: '今天 18:00',
-      status: '待检查',
-    },
-    {
-      deviceCode: 'EXT-005',
-      device: '灭火器',
-      deviceFull: 'C栋-1层灭火器',
-      template: '月度灭火器检查表',
-      location: 'C栋-1层',
-      assignee: '赵六',
-      deadline: '明天 18:00',
-      status: '待检查',
-    },
-    {
-      deviceCode: 'SPR-015',
-      device: '喷淋',
-      deviceFull: '地下车库喷淋',
-      template: '季度喷淋检测表',
-      location: 'B1层',
-      assignee: '钱七',
-      deadline: '今天 18:00',
-      status: '待检查',
-    },
-  ],
-  completed: [
-    {
-      deviceCode: 'EXT-003',
-      device: '灭火器',
-      deviceFull: '大厅灭火器',
-      template: '月度灭火器检查表',
-      location: 'A栋-1层',
-      assignee: '张三',
-      deadline: '2026-07-15 18:00',
-      status: '已完成',
-    },
-    {
-      deviceCode: 'SEN-031',
-      device: '烟感',
-      deviceFull: 'C栋温感',
-      template: '季度烟感检测表',
-      location: 'C栋-5层',
-      assignee: '王五',
-      deadline: '2026-07-14 18:00',
-      status: '已完成',
-    },
-    {
-      deviceCode: 'HYD-012',
-      device: '消火栓',
-      deviceFull: '西侧消火栓',
-      template: '月度消火栓检查表',
-      location: 'C栋-2层',
-      assignee: '李四',
-      deadline: '2026-07-13 18:00',
-      status: '已完成',
-    },
-    {
-      deviceCode: 'SPR-022',
-      device: '喷淋',
-      deviceFull: 'A栋车库喷淋',
-      template: '月度喷淋检查表',
-      location: 'A栋-B1层',
-      assignee: '钱七',
-      deadline: '2026-07-12 18:00',
-      status: '已完成',
-    },
-  ],
-  overdue: [
-    {
-      deviceCode: 'SEN-023',
-      device: '烟感',
-      deviceFull: 'B栋烟感',
-      template: '季度烟感检测表',
-      location: 'B栋-3层',
-      assignee: '王五',
-      deadline: '昨天 18:00',
-      status: '已超时',
-    },
-    {
-      deviceCode: 'EXT-007',
-      device: '灭火器',
-      deviceFull: 'B栋2层灭火器',
-      template: '月度灭火器检查表',
-      location: 'B栋-2层',
-      assignee: '赵六',
-      deadline: '2026-07-14 18:00',
-      status: '已超时',
-    },
-    {
-      deviceCode: 'HYD-015',
-      device: '消火栓',
-      deviceFull: 'B栋北侧消火栓',
-      template: '月度消火栓检查表',
-      location: 'B栋-1层',
-      assignee: '李四',
-      deadline: '2026-07-13 18:00',
-      status: '已超时',
-    },
-  ],
-}
+const loading = computed(() => taskStore.loading)
+const tabCounts = computed(() => taskStore.tabCounts)
 
 const currentTaskList = computed(() => {
-  return allTasks[activeTab.value] || []
+  return taskStore.taskList
 })
 
 function taskTableRowClassName({ row }) {
@@ -257,53 +149,32 @@ function taskStatusTagType(status) {
 
 // ---------- Template Management ----------
 const showTemplateDialog = ref(false)
-
-const templateList = [
-  {
-    name: '月度灭火器检查表',
-    deviceType: '灭火器',
-    itemCount: 6,
-    cycle: '每月',
-    lastUpdate: '2026-07-01',
-  },
-  {
-    name: '月度消火栓检查表',
-    deviceType: '消火栓',
-    itemCount: 8,
-    cycle: '每月',
-    lastUpdate: '2026-07-01',
-  },
-  {
-    name: '季度烟感检测表',
-    deviceType: '烟感',
-    itemCount: 4,
-    cycle: '每季度',
-    lastUpdate: '2026-07-01',
-  },
-  {
-    name: '季度喷淋检测表',
-    deviceType: '喷淋',
-    itemCount: 5,
-    cycle: '每季度',
-    lastUpdate: '2026-07-01',
-  },
-  {
-    name: '年度消防联动测试表',
-    deviceType: '全部',
-    itemCount: 12,
-    cycle: '每年',
-    lastUpdate: '2026-01-05',
-  },
-]
+const templateList = computed(() => taskStore.templateList)
 
 // ---------- Actions ----------
-function handleDispatch() {
-  ElMessage.info('派发任务功能开发中')
+async function handleDispatch() {
+  try {
+    await ElMessageBox.confirm('确认派发任务？', '提示', {
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+      type: 'info',
+    })
+    // 打开派发任务对话框（后续可扩展为独立弹窗组件）
+    ElMessage.info('派发任务功能开发中')
+  } catch {
+    // 用户取消
+  }
 }
 
 function viewTask(row) {
   ElMessage.info(`查看任务: ${row.deviceCode} ${row.device}`)
 }
+
+// ---------- Init ----------
+onMounted(() => {
+  taskStore.fetchTasks({ status: tabMap[activeTab.value]?.status })
+  taskStore.fetchTemplates()
+})
 </script>
 
 <style scoped>

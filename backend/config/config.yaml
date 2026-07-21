@@ -1,0 +1,15 @@
+server:
+  port: 8080
+
+database:
+  host: localhost
+  port: 5432
+  user: fire_duty
+  password: fire_duty_pass
+  dbname: fire_duty
+
+jwt:
+  secret: "change-me-in-production"
+
+upload:
+  dir: "./uploads"

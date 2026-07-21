@@ -61,28 +61,28 @@
           <div class="completion-body">
             <el-progress
               type="circle"
-              :percentage="71.1"
+              :percentage="stats.completionRate"
               :stroke-width="10"
               :width="160"
               color="#1890ff"
               stroke-linecap="round"
             >
               <template #default>
-                <span class="completion-value">71.1%</span>
+                <span class="completion-value">{{ stats.completionRate }}%</span>
               </template>
             </el-progress>
             <div class="completion-stats">
               <div class="comp-stat">
                 <span class="comp-label">计划任务</span>
-                <span class="comp-num">63</span>
+                <span class="comp-num">{{ stats.plannedTasks }}</span>
               </div>
               <div class="comp-stat">
                 <span class="comp-label">已完成</span>
-                <span class="comp-num" style="color: #1890ff;">45</span>
+                <span class="comp-num" style="color: #1890ff;">{{ stats.completedTasks }}</span>
               </div>
               <div class="comp-stat">
                 <span class="comp-label">未完成</span>
-                <span class="comp-num" style="color: #f56c6c;">18</span>
+                <span class="comp-num" style="color: #f56c6c;">{{ stats.overdueTasks }}</span>
               </div>
             </div>
           </div>
@@ -124,57 +124,47 @@
 </template>
 
 <script setup>
-import { h } from 'vue'
+import { computed, onMounted } from 'vue'
 import { Monitor, TopRight, Check, WarningFilled } from '@element-plus/icons-vue'
+import { useDashboardStore } from '@/stores/dashboard'
 
-const statCards = [
+const dashboardStore = useDashboardStore()
+const { stats, alerts } = dashboardStore
+
+const statCards = computed(() => [
   {
     label: '设备总数',
-    value: '568',
+    value: String(stats.value.totalDevices),
     color: '#1890ff',
     bgColor: '#e6f7ff',
     icon: Monitor,
   },
   {
     label: '在线率',
-    value: '93.7%',
+    value: stats.value.onlineRate + '%',
     color: '#52c41a',
     bgColor: '#f6ffed',
     icon: TopRight,
   },
   {
     label: '今日巡检',
-    value: '45',
+    value: String(stats.value.todayInspections),
     color: '#1890ff',
     bgColor: '#e6f7ff',
     icon: Check,
   },
   {
     label: '待整改',
-    value: '8',
+    value: String(stats.value.pendingRectifications),
     color: '#f56c6c',
     bgColor: '#fff1f0',
     icon: WarningFilled,
   },
-]
+])
 
-const alerts = [
-  {
-    severity: 'P0',
-    description: 'A区3号楼消防栓水压异常，需立即安排检修',
-    time: '10 分钟前',
-  },
-  {
-    severity: 'P1',
-    description: 'B区2层灭火器即将过期（剩余15天），请及时更换',
-    time: '1 小时前',
-  },
-  {
-    severity: 'P2',
-    description: 'C区消防通道存在杂物堆积，已通知物业清理',
-    time: '3 小时前',
-  },
-]
+onMounted(async () => {
+  await Promise.all([dashboardStore.fetchStats(), dashboardStore.fetchAlerts()])
+})
 </script>
 
 <style scoped>

@@ -86,30 +86,30 @@ onMounted(() => {
   }
 })
 
-function handleLogin() {
-  formRef.value?.validate((valid) => {
+async function handleLogin() {
+  formRef.value?.validate(async (valid) => {
     if (!valid) return
     loading.value = true
 
-    // Simulate login delay
-    setTimeout(() => {
-      try {
-        appStore.login({ username: form.username, password: form.password })
+    try {
+      await appStore.login({ username: form.username, password: form.password })
 
-        if (rememberMe.value) {
-          localStorage.setItem('remembered_username', form.username)
-        } else {
-          localStorage.removeItem('remembered_username')
-        }
-
-        ElMessage.success('登录成功！')
-        router.push('/dashboard')
-      } catch (err) {
-        ElMessage.error('登录失败，请检查用户名和密码')
-      } finally {
-        loading.value = false
+      if (rememberMe.value) {
+        localStorage.setItem('remembered_username', form.username)
+      } else {
+        localStorage.removeItem('remembered_username')
       }
-    }, 600)
+
+      ElMessage.success('登录成功！')
+      router.push('/dashboard')
+    } catch (err) {
+      // Error message already handled by request interceptor
+      if (!err.response) {
+        ElMessage.error('登录失败，请检查用户名和密码或后端服务是否启动')
+      }
+    } finally {
+      loading.value = false
+    }
   })
 }
 </script>

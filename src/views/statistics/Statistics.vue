@@ -29,7 +29,7 @@
 
             <!-- Polyline -->
             <polyline
-              points="85,152 145,128 205,88 265,96 325,80"
+              :points="linePoints"
               fill="none"
               stroke="#409eff"
               stroke-width="2.5"
@@ -39,7 +39,7 @@
 
             <!-- Area under line -->
             <polygon
-              points="85,152 85,170 145,170 145,128 205,170 205,88 265,170 265,96 325,170 325,80"
+              :points="areaPoints"
               fill="url(#lineGradient)"
               opacity="0.15"
             />
@@ -52,26 +52,32 @@
               </linearGradient>
             </defs>
 
-            <!-- Dots -->
-            <circle cx="85" cy="152" r="4" fill="#409eff" stroke="#fff" stroke-width="2" />
-            <text x="85" y="170" text-anchor="middle" fill="#666" font-size="10">5月</text>
-            <text x="85" y="148" text-anchor="middle" fill="#409eff" font-size="11" font-weight="bold">60%</text>
-
-            <circle cx="145" cy="128" r="4" fill="#409eff" stroke="#fff" stroke-width="2" />
-            <text x="145" y="170" text-anchor="middle" fill="#666" font-size="10">6月</text>
-            <text x="145" y="124" text-anchor="middle" fill="#409eff" font-size="11" font-weight="bold">70%</text>
-
-            <circle cx="205" cy="88" r="4" fill="#409eff" stroke="#fff" stroke-width="2" />
-            <text x="205" y="170" text-anchor="middle" fill="#666" font-size="10">7月</text>
-            <text x="205" y="84" text-anchor="middle" fill="#409eff" font-size="11" font-weight="bold">85%</text>
-
-            <circle cx="265" cy="96" r="4" fill="#409eff" stroke="#fff" stroke-width="2" />
-            <text x="265" y="170" text-anchor="middle" fill="#666" font-size="10">8月</text>
-            <text x="265" y="92" text-anchor="middle" fill="#409eff" font-size="11" font-weight="bold">80%</text>
-
-            <circle cx="325" cy="80" r="4" fill="#409eff" stroke="#fff" stroke-width="2" />
-            <text x="325" y="170" text-anchor="middle" fill="#666" font-size="10">9月</text>
-            <text x="325" y="76" text-anchor="middle" fill="#409eff" font-size="11" font-weight="bold">88%</text>
+            <!-- Data points -->
+            <template v-for="(item, i) in compliance" :key="i">
+              <circle
+                :cx="getLineX(i)"
+                :cy="getLineY(item.rate)"
+                r="4"
+                fill="#409eff"
+                stroke="#fff"
+                stroke-width="2"
+              />
+              <text
+                :x="getLineX(i)"
+                y="170"
+                text-anchor="middle"
+                fill="#666"
+                font-size="10"
+              >{{ item.month }}</text>
+              <text
+                :x="getLineX(i)"
+                :y="getLineY(item.rate) - 4"
+                text-anchor="middle"
+                fill="#409eff"
+                font-size="11"
+                font-weight="bold"
+              >{{ item.rate }}%</text>
+            </template>
           </svg>
         </div>
       </el-card>
@@ -83,31 +89,34 @@
         </template>
         <div class="chart-container">
           <svg viewBox="0 0 400 200" class="bar-chart-svg">
-            <!-- Bars -->
-            <!-- 灭火器 - red -->
-            <rect x="40" y="40" width="50" height="120" rx="3" fill="#f56c6c" />
-            <text x="65" y="36" text-anchor="middle" fill="#f56c6c" font-size="11" font-weight="bold">60%</text>
-            <text x="65" y="173" text-anchor="middle" fill="#666" font-size="10">灭火器</text>
-
-            <!-- 消火栓 - amber -->
-            <rect x="110" y="60" width="50" height="100" rx="3" fill="#e6a23c" />
-            <text x="135" y="56" text-anchor="middle" fill="#e6a23c" font-size="11" font-weight="bold">40%</text>
-            <text x="135" y="173" text-anchor="middle" fill="#666" font-size="10">消火栓</text>
-
-            <!-- 烟感 - blue -->
-            <rect x="180" y="70" width="50" height="90" rx="3" fill="#409eff" />
-            <text x="205" y="66" text-anchor="middle" fill="#409eff" font-size="11" font-weight="bold">30%</text>
-            <text x="205" y="173" text-anchor="middle" fill="#666" font-size="10">烟感</text>
-
-            <!-- 喷淋 - green -->
-            <rect x="250" y="80" width="50" height="80" rx="3" fill="#67c23a" />
-            <text x="275" y="76" text-anchor="middle" fill="#67c23a" font-size="11" font-weight="bold">20%</text>
-            <text x="275" y="173" text-anchor="middle" fill="#666" font-size="10">喷淋</text>
-
-            <!-- 其他 - gray -->
-            <rect x="320" y="85" width="50" height="75" rx="3" fill="#909399" />
-            <text x="345" y="81" text-anchor="middle" fill="#909399" font-size="11" font-weight="bold">15%</text>
-            <text x="345" y="173" text-anchor="middle" fill="#666" font-size="10">其他</text>
+            <template v-for="(item, i) in hazardDistribution" :key="i">
+              <!-- Bar -->
+              <rect
+                :x="getBarX(i)"
+                :y="getBarY(item.percentage)"
+                width="50"
+                :height="getBarHeight(item.percentage)"
+                rx="3"
+                :fill="item.color || barColors[i % barColors.length]"
+              />
+              <!-- Percentage label -->
+              <text
+                :x="getBarX(i) + 25"
+                :y="getBarY(item.percentage) - 4"
+                text-anchor="middle"
+                :fill="item.color || barColors[i % barColors.length]"
+                font-size="11"
+                font-weight="bold"
+              >{{ item.percentage }}%</text>
+              <!-- Category label -->
+              <text
+                :x="getBarX(i) + 25"
+                y="173"
+                text-anchor="middle"
+                fill="#666"
+                font-size="10"
+              >{{ item.name }}</text>
+            </template>
           </svg>
         </div>
       </el-card>
@@ -117,9 +126,9 @@
     <div class="summary-row">
       <el-card shadow="never" class="summary-card">
         <div class="summary-content">
-          <span class="summary-item">📌 灭火器相关问题占比最高（35.0%）</span>
+          <span class="summary-item">📌 {{ summary.maxHazardType }}相关问题占比最高（{{ summary.maxHazardPercentage }}%）</span>
           <span class="summary-divider" />
-          <span class="summary-item highlight">✅ 整体合规率: 93.5%</span>
+          <span class="summary-item highlight">✅ 整体合规率: {{ summary.overallComplianceRate }}%</span>
         </div>
       </el-card>
     </div>
@@ -127,6 +136,61 @@
 </template>
 
 <script setup>
+import { computed, onMounted } from 'vue'
+import { useStatisticsStore } from '@/stores/statistics'
+
+const statisticsStore = useStatisticsStore()
+const { compliance, hazardDistribution, summary } = statisticsStore
+
+const barColors = ['#f56c6c', '#e6a23c', '#409eff', '#67c23a', '#909399']
+
+// Line chart: X range 50..380, N points evenly spaced
+function getLineX(index) {
+  const n = compliance.value.length
+  if (n <= 1) return 215
+  return 50 + (index * 330) / (n - 1)
+}
+
+// Y range: 100% → 40 (top), 0% → 170 (bottom), scale = 130px
+function getLineY(rate) {
+  return 170 - (rate / 100) * 130
+}
+
+const linePoints = computed(() =>
+  compliance.value.map((d, i) => `${getLineX(i)},${getLineY(d.rate)}`).join(' ')
+)
+
+const areaPoints = computed(() => {
+  const pts = compliance.value.map((d, i) => `${getLineX(i)},${getLineY(d.rate)}`).join(' ')
+  if (!compliance.value.length) return ''
+  const firstX = getLineX(0)
+  const lastX = getLineX(compliance.value.length - 1)
+  return `${firstX},170 ${pts} ${lastX},170`
+})
+
+// Bar chart: bars centered at x-offsets: 65, 135, 205, 275, 345
+// Each bar is 50px wide, so rect.x = center - 25
+function getBarX(index) {
+  const centers = [40, 110, 180, 250, 320]
+  return (centers[index] !== undefined ? centers[index] : 320) + 0
+}
+
+function getBarY(pct) {
+  // Map 100% → y=30 (top), 0% → y=170 (bottom), height 140px
+  return 170 - Math.min(pct, 100) * 1.4
+}
+
+function getBarHeight(pct) {
+  return Math.min(pct, 100) * 1.4
+}
+
+onMounted(async () => {
+  await Promise.all([
+    statisticsStore.fetchCompliance(),
+    statisticsStore.fetchHazardDistribution(),
+    statisticsStore.fetchSummary(),
+  ])
+})
 </script>
 
 <style scoped>

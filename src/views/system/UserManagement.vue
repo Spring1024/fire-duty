@@ -2,15 +2,15 @@
   <div class="user-management">
     <!-- Toolbar -->
     <div class="user-toolbar">
-      <span class="toolbar-title">用户列表 共 24 人</span>
+      <span class="toolbar-title">用户列表 共 {{ total }} 人</span>
       <div class="toolbar-actions">
         <el-button plain>导入</el-button>
-        <el-button type="primary">新增用户</el-button>
+        <el-button type="primary" @click="handleAdd">新增用户</el-button>
       </div>
     </div>
 
     <!-- Table -->
-    <el-table :data="userList" stripe style="width: 100%">
+    <el-table :data="userList" stripe style="width: 100%" v-loading="loading">
       <el-table-column prop="name" label="姓名" width="120" />
       <el-table-column prop="username" label="用户名" width="130" />
       <el-table-column label="角色" width="150">
@@ -29,65 +29,152 @@
         </template>
       </el-table-column>
       <el-table-column label="操作" width="120">
-        <template #default>
-          <el-button link type="primary" size="small">编辑</el-button>
-          <el-button link type="danger" size="small">删除</el-button>
+        <template #default="{ row }">
+          <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
+          <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
+
+    <!-- Add / Edit Dialog -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="isEditing ? '编辑用户' : '新增用户'"
+      width="480px"
+    >
+      <el-form ref="formRef" :model="form" label-width="80px" size="default">
+        <el-form-item label="姓名" prop="name" required>
+          <el-input v-model="form.name" placeholder="请输入姓名" />
+        </el-form-item>
+        <el-form-item label="用户名" prop="username" required>
+          <el-input v-model="form.username" placeholder="请输入用户名" />
+        </el-form-item>
+        <el-form-item label="角色" prop="role" required>
+          <el-select v-model="form.role" placeholder="请选择角色" style="width: 100%">
+            <el-option label="超级管理员" value="超级管理员" />
+            <el-option label="大网格负责人" value="大网格负责人" />
+            <el-option label="中网格组长" value="中网格组长" />
+            <el-option label="小网格检查员" value="小网格检查员" />
+            <el-option label="维保单位" value="维保单位" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="所属网格" prop="grid">
+          <el-input v-model="form.grid" placeholder="请输入所属网格" />
+        </el-form-item>
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="form.phone" placeholder="请输入手机号" />
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-select v-model="form.status" placeholder="请选择状态" style="width: 100%">
+            <el-option label="正常" value="正常" />
+            <el-option label="停用" value="停用" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="submitting">确认</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 
-const userList = ref([
-  {
-    name: '管理员',
-    username: 'admin',
-    role: '超级管理员',
-    roleType: 'danger',
-    grid: '全局',
-    phone: '138****0000',
-    status: '正常',
-  },
-  {
-    name: '张三',
-    username: 'zhangsan',
-    role: '大网格负责人',
-    roleType: 'primary',
-    grid: '未来科技产业园',
-    phone: '138****0001',
-    status: '正常',
-  },
-  {
-    name: '李四',
-    username: 'lisi',
-    role: '中网格组长',
-    roleType: 'success',
-    grid: 'A栋',
-    phone: '138****0002',
-    status: '正常',
-  },
-  {
-    name: '王五',
-    username: 'wangwu',
-    role: '小网格检查员',
-    roleType: 'warning',
-    grid: 'A栋-3层',
-    phone: '138****0003',
-    status: '停用',
-  },
-  {
-    name: '赵六',
-    username: 'zhaoliu',
-    role: '维保单位',
-    roleType: '',
-    grid: '按授权',
-    phone: '138****0004',
-    status: '正常',
-  },
-])
+const userStore = useUserStore()
+
+const userList = computed(() => userStore.userList)
+const loading = computed(() => userStore.loading)
+const total = computed(() => userStore.total)
+
+// ---------- Dialog ----------
+const dialogVisible = ref(false)
+const isEditing = ref(false)
+const editingId = ref(null)
+const submitting = ref(false)
+
+const defaultForm = {
+  name: '',
+  username: '',
+  role: '',
+  grid: '',
+  phone: '',
+  status: '正常',
+}
+
+const form = ref({ ...defaultForm })
+
+function resetForm() {
+  form.value = { ...defaultForm }
+}
+
+function handleAdd() {
+  isEditing.value = false
+  editingId.value = null
+  resetForm()
+  dialogVisible.value = true
+}
+
+function handleEdit(row) {
+  isEditing.value = true
+  editingId.value = row.id
+  form.value = {
+    name: row.name,
+    username: row.username,
+    role: row.role,
+    roleType: row.roleType,
+    grid: row.grid,
+    phone: row.phone,
+    status: row.status,
+  }
+  dialogVisible.value = true
+}
+
+async function handleSubmit() {
+  if (!form.value.name || !form.value.username || !form.value.role) {
+    ElMessage.warning('请填写完整信息')
+    return
+  }
+  submitting.value = true
+  try {
+    if (isEditing.value) {
+      await userStore.updateUser(editingId.value, form.value)
+      ElMessage.success('用户更新成功')
+    } else {
+      await userStore.createUser(form.value)
+      ElMessage.success('用户创建成功')
+    }
+    dialogVisible.value = false
+    userStore.fetchUsers()
+  } catch (err) {
+    // 错误已在拦截器中统一处理
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function handleDelete(row) {
+  try {
+    await ElMessageBox.confirm(`确认删除用户"${row.name}"？`, '删除确认', {
+      confirmButtonText: '确认删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    await userStore.deleteUser(row.id)
+    ElMessage.success('删除成功')
+    userStore.fetchUsers()
+  } catch (err) {
+    // cancel or error
+  }
+}
+
+// ---------- Lifecycle ----------
+onMounted(() => {
+  userStore.fetchUsers()
+})
 </script>
 
 <style scoped>
