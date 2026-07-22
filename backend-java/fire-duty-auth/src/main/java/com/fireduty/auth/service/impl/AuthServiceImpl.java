@@ -13,7 +13,9 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import com.fireduty.auth.dto.PasswordChangeRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +35,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserMapper userMapper;
     private final PermissionMapper permissionMapper;
     private final JwtConfig jwtConfig;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Override
     public LoginResponse login(LoginRequest request) {
@@ -161,6 +164,35 @@ public class AuthServiceImpl implements AuthService {
                 .gridId(user.getGridId())
                 .lastLogin(user.getLastLogin())
                 .build();
+    }
+
+    @Override
+    public void changePassword(Long userId, String oldPassword, String newPassword) {
+        log.info("修改密码 userId={}", userId);
+
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        // 验证旧密码（兼容 bcrypt 和明文存储）
+        boolean passwordMatch;
+        if (user.getPasswordHash().startsWith("$2a$") || user.getPasswordHash().startsWith("$2b$")
+                || user.getPasswordHash().startsWith("$2y$")) {
+            passwordMatch = passwordEncoder.matches(oldPassword, user.getPasswordHash());
+        } else {
+            passwordMatch = oldPassword.equals(user.getPasswordHash());
+        }
+
+        if (!passwordMatch) {
+            throw new RuntimeException("旧密码错误");
+        }
+
+        // 更新新密码（bcrypt 加密）
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userMapper.updateById(user);
+
+        log.info("密码修改成功 userId={}", userId);
     }
 
     /**

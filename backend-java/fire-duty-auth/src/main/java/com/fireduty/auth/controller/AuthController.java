@@ -2,6 +2,7 @@ package com.fireduty.auth.controller;
 
 import com.fireduty.auth.dto.LoginRequest;
 import com.fireduty.auth.dto.LoginResponse;
+import com.fireduty.auth.dto.PasswordChangeRequest;
 import com.fireduty.auth.dto.RefreshTokenRequest;
 import com.fireduty.auth.dto.UserInfoDTO;
 import com.fireduty.auth.service.AuthService;
@@ -40,6 +41,14 @@ public class AuthController {
         Long userId = Long.valueOf(jwt.getSubject());
         UserInfoDTO userInfo = authService.getCurrentUser(userId);
         return ResponseEntity.ok(userInfo);
+    }
+
+    @PutMapping("/password")
+    public ResponseEntity<Void> changePassword(@AuthenticationPrincipal Jwt jwt,
+                                                @Valid @RequestBody PasswordChangeRequest request) {
+        Long userId = Long.valueOf(jwt.getSubject());
+        authService.changePassword(userId, request.getOldPassword(), request.getNewPassword());
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/check")

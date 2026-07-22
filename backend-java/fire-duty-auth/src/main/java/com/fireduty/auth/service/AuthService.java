@@ -21,4 +21,9 @@ public interface AuthService {
      * 获取当前登录用户信息
      */
     UserInfoDTO getCurrentUser(Long userId);
+
+    /**
+     * 修改密码
+     */
+    void changePassword(Long userId, String oldPassword, String newPassword);
 }
