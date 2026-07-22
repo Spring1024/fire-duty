@@ -8,6 +8,12 @@ const routes = [
     meta: { title: '登录', noAuth: true },
   },
   {
+    path: '/mobile/scan',
+    name: 'MobileScan',
+    component: () => import('@/views/mobile/MobileScan.vue'),
+    meta: { title: '扫码检查', noAuth: true },
+  },
+  {
     path: '/',
     component: () => import('@/layout/MainLayout.vue'),
     redirect: '/dashboard',
