@@ -1,0 +1,18 @@
+server:
+  port: 8082
+spring:
+  application:
+    name: fire-duty-device
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:fire_duty}
+    username: ${DB_USER:fire_duty}
+    password: ${DB_PASS:fire_duty_pass}
+    driver-class-name: org.postgresql.Driver
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+  type-aliases-package: com.fireduty.device.entity

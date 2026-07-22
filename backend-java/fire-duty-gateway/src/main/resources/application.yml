@@ -1,0 +1,46 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: fire-duty-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: auth-service
+          uri: lb://fire-duty-auth
+          predicates:
+            - Path=/auth/**
+        - id: device-service
+          uri: lb://fire-duty-device
+          predicates:
+            - Path=/devices/**
+        - id: task-service
+          uri: lb://fire-duty-task
+          predicates:
+            - Path=/tasks/**
+        - id: rectification-service
+          uri: lb://fire-duty-rectification
+          predicates:
+            - Path=/rectifications/**
+        - id: statistics-service
+          uri: lb://fire-duty-statistics
+          predicates:
+            - Path=/statistics/**
+        - id: user-service
+          uri: lb://fire-duty-user
+          predicates:
+            - Path=/users/**
+        - id: mobile-service
+          uri: lb://fire-duty-mobile
+          predicates:
+            - Path=/mobile/**,/upload/**
+      default-filters:
+        - name: JwtAuthGatewayFilter
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins: "*"
+            allowed-methods: "*"
+            allowed-headers: "*"
+  main:
+    web-application-type: reactive
