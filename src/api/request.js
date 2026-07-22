@@ -25,9 +25,9 @@ request.interceptors.request.use(
 // 响应拦截器 — 统一处理业务错误 / 401 / 网络错误
 request.interceptors.response.use(
   (response) => {
-    const { code, message } = response.data
+    const { code, message, data } = response.data
     if (code === 0) {
-      return response.data
+      return { code, message, data }
     }
     // 业务逻辑错误
     ElMessage.error(message || '请求失败')

@@ -92,6 +92,7 @@ async function handleLogin() {
     loading.value = true
 
     try {
+      console.log("start")
       await appStore.login({ username: form.username, password: form.password })
 
       if (rememberMe.value) {

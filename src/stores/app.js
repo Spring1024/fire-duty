@@ -2,70 +2,63 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { loginAPI, getMeAPI } from '@/api/auth'
 
-export const useAppStore = defineStore('app', () => {
-  // User info
-  const user = ref({
-    name: '',
-    username: '',
-    role: '',
-    avatar: '',
-  })
+export const useAppStore = defineStore('app', {
+  state: () => ({
+    user: {
+      name: '',
+      username: '',
+      role: '',
+      avatar: '',
+    },
+    sidebarCollapsed: false,
+  }),
+  getters: {
+    isLoggedIn: (state) => !!localStorage.getItem('token'),
+  },
+  actions: {
+    async login(credentials) {
+      console.log("credentials", credentials)
+      const res = await loginAPI(credentials)
+      console.log("res", res)
+      const { token, refreshToken, user: userInfo } = res.data
 
-  const isLoggedIn = computed(() => !!localStorage.getItem('token'))
-
-  // Sidebar collapse
-  const sidebarCollapsed = ref(false)
-  const toggleSidebar = () => {
-    sidebarCollapsed.value = !sidebarCollapsed.value
-  }
-
-  // Login / logout
-  async function login(credentials) {
-    const res = await loginAPI(credentials)
-    const { token, refreshToken, user: userInfo } = res.data
-
-    localStorage.setItem('token', token)
-    if (refreshToken) {
-      localStorage.setItem('refreshToken', refreshToken)
-    }
-
-    user.value = {
-      name: userInfo?.name || credentials.username,
-      username: userInfo?.username || credentials.username,
-      role: userInfo?.role || '',
-      avatar: userInfo?.avatar || '',
-    }
-
-    return res
-  }
-
-  async function fetchUserInfo() {
-    try {
-      const res = await getMeAPI()
-      user.value = {
-        name: res.data?.name || '',
-        username: res.data?.username || '',
-        role: res.data?.role || '',
-        avatar: res.data?.avatar || '',
+      localStorage.setItem('token', token)
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken)
       }
-    } catch (err) {
-      console.error('获取用户信息失败:', err)
-    }
-  }
 
-  function logout() {
-    user.value = { name: '', username: '', role: '', avatar: '' }
-    localStorage.removeItem('token')
-    localStorage.removeItem('refreshToken')
-  }
+      this.user = {
+        name: userInfo?.name || credentials.username,
+        username: userInfo?.username || credentials.username,
+        role: userInfo?.role || '',
+        avatar: userInfo?.avatar || '',
+      }
 
-  return {
-    user,
-    isLoggedIn,
-    sidebarCollapsed,
-    toggleSidebar,
-    login,
-    fetchUserInfo,
-    logout,
-  }
+      return res
+    },
+
+    async fetchUserInfo() {
+      try {
+        const res = await getMeAPI()
+        this.user = {
+          name: res.data?.name || '',
+          username: res.data?.username || '',
+          role: res.data?.role || '',
+          avatar: res.data?.avatar || '',
+        }
+      } catch (err) {
+        console.error('获取用户信息失败:', err)
+      }
+    },
+
+    logout() {
+      this.user = { name: '', username: '', role: '', avatar: '' }
+      localStorage.removeItem('token')
+      localStorage.removeItem('refreshToken')
+    },
+
+    toggleSidebar() {
+      this.sidebarCollapsed = !this.sidebarCollapsed
+    },
+  },
 })
