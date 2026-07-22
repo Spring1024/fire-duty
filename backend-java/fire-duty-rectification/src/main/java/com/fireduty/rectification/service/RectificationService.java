@@ -12,4 +12,14 @@ public interface RectificationService {
     Rectification submitFix(Long id, String comment);
     Rectification review(Long id, boolean approved, String comment);
     Rectification uploadPhoto(Long id, String type, String url);
+
+    /**
+     * 归档：已闭环 → 已归档
+     */
+    Rectification archive(Long id);
+
+    /**
+     * 超时升级：超时超过48h升级到上一级
+     */
+    Rectification escalate(Long id);
 }

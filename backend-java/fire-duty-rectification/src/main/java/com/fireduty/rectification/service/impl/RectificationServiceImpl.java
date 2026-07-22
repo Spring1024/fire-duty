@@ -1,6 +1,5 @@
 package com.fireduty.rectification.service.impl;
 
-import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fireduty.common.exception.BusinessException;
@@ -18,6 +17,8 @@ import com.fireduty.rectification.mapper.RectificationTimelineMapper;
 import com.fireduty.rectification.service.RectificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@EnableScheduling
 @RequiredArgsConstructor
 public class RectificationServiceImpl implements RectificationService {
 
@@ -40,7 +42,7 @@ public class RectificationServiceImpl implements RectificationService {
     @Override
     public Page<Rectification> list(RectificationQuery query) {
         LambdaQueryWrapper<Rectification> wrapper = new LambdaQueryWrapper<>();
-        if (StrUtil.isNotBlank(query.getTab())) {
+        if (query.getTab() != null && !query.getTab().isBlank()) {
             wrapper.eq(Rectification::getStatus, statusFromTab(query.getTab()));
         }
         wrapper.orderByDesc(Rectification::getId);
@@ -133,6 +135,72 @@ public class RectificationServiceImpl implements RectificationService {
         photo.setTakenAt(LocalDateTime.now());
         photoMapper.insert(photo);
         return rect;
+    }
+
+    @Override
+    @Transactional
+    public Rectification archive(Long id) {
+        Rectification rect = rectificationMapper.selectById(id);
+        if (rect == null) throw new ResourceNotFoundException("整改单不存在");
+        if (!"已闭环".equals(rect.getStatus())) {
+            throw new BusinessException("仅已闭环状态的整改单可归档");
+        }
+        rect.setStatus("已归档");
+        rect.setUpdatedAt(LocalDateTime.now());
+        rectificationMapper.updateById(rect);
+        addTimeline(rect.getId(), "归档", null, "整改单已归档");
+        log.info("Rectification {} archived", id);
+        return rect;
+    }
+
+    @Override
+    @Transactional
+    public Rectification escalate(Long id) {
+        Rectification rect = rectificationMapper.selectById(id);
+        if (rect == null) throw new ResourceNotFoundException("整改单不存在");
+        // 超时升级：标识超时升级到上一级
+        addTimeline(rect.getId(), "超时升级", null, "整改超时48h，已升级到上级网格负责人处理");
+        log.info("Rectification {} escalated to superior", id);
+        return rect;
+    }
+
+    /**
+     * 定时任务：每30分钟检查超时整改单，标记已超时
+     * 整改中超过48h未完成的自动升级
+     */
+    @Scheduled(fixedRate = 1800000) // 30分钟
+    @Transactional
+    public void checkTimeouts() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime deadline48hAgo = now.minusHours(48);
+
+        // 1) 查找已超期的整改单（待派发/整改中/待复核 且 deadline已过）
+        List<Rectification> overdueRects = rectificationMapper.selectList(
+                new LambdaQueryWrapper<Rectification>()
+                        .in(Rectification::getStatus, "待派发", "整改中", "待复核")
+                        .isNotNull(Rectification::getDeadline)
+                        .lt(Rectification::getDeadline, now));
+
+        for (Rectification rect : overdueRects) {
+            if (!"已超时".equals(rect.getStatus())) {
+                rect.setStatus("已超时");
+                rect.setUpdatedAt(now);
+                rectificationMapper.updateById(rect);
+                addTimeline(rect.getId(), "系统自动超时", null, "整改期限已过，系统自动标记为已超时");
+                log.info("Rectification {} auto-timed out", rect.getId());
+            }
+        }
+
+        // 2) 查找超时超过48h的整改单，自动升级
+        List<Rectification> escalateRects = rectificationMapper.selectList(
+                new LambdaQueryWrapper<Rectification>()
+                        .eq(Rectification::getStatus, "已超时")
+                        .isNotNull(Rectification::getDeadline)
+                        .lt(Rectification::getDeadline, deadline48hAgo));
+
+        for (Rectification rect : escalateRects) {
+            escalate(rect.getId());
+        }
     }
 
     private void addTimeline(Long rectId, String action, Long operatorId, String comment) {

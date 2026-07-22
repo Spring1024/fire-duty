@@ -7,23 +7,27 @@ import com.fireduty.device.dto.DeviceImportDTO;
 import com.fireduty.device.dto.DeviceQuery;
 import com.fireduty.device.entity.Device;
 import com.fireduty.device.service.DeviceService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.fireduty.device.service.ExcelService;
+import com.fireduty.device.service.QrCodeService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/devices")
+@RequiredArgsConstructor
 public class DeviceController {
 
-    @Autowired
-    private DeviceService deviceService;
+    private final DeviceService deviceService;
+    private final QrCodeService qrCodeService;
+    private final ExcelService excelService;
 
     @GetMapping
     @RequirePermission(resource = "devices", action = "read")
@@ -35,9 +39,7 @@ public class DeviceController {
     @RequirePermission(resource = "devices", action = "read")
     public ResponseEntity<DeviceDTO> getById(@PathVariable Long id) {
         DeviceDTO dto = deviceService.getById(id);
-        if (dto == null) {
-            return ResponseEntity.notFound().build();
-        }
+        if (dto == null) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(dto);
     }
 
@@ -78,34 +80,60 @@ public class DeviceController {
         return ResponseEntity.ok(tree);
     }
 
-    @PostMapping("/import")
-    @RequirePermission(resource = "devices", action = "write")
-    public ResponseEntity<Integer> importDevices(@RequestBody List<DeviceImportDTO> importList) {
-        return ResponseEntity.ok(deviceService.importDevices(importList));
+    /**
+     * 生成设备二维码图片
+     * GET /devices/{id}/qrcode
+     */
+    @GetMapping("/{id}/qrcode")
+    @RequirePermission(resource = "devices", action = "read")
+    public ResponseEntity<byte[]> generateQrCode(@PathVariable Long id) {
+        DeviceDTO device = deviceService.getById(id);
+        if (device == null) return ResponseEntity.notFound().build();
+
+        // 二维码内容：设备信息 URL（或设备编码）
+        String content = "fireduty://device/" + device.getCode();
+        byte[] qrImage = qrCodeService.generateQrCode(content, 300, 300);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.IMAGE_PNG);
+        headers.setContentDispositionFormData("attachment", "qrcode_" + device.getCode() + ".png");
+        return ResponseEntity.ok().headers(headers).body(qrImage);
     }
 
+    /**
+     * 批量导入设备（支持 Excel .xlsx 上传）
+     * POST /devices/import
+     */
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @RequirePermission(resource = "devices", action = "write")
+    public ResponseEntity<Integer> importDevices(@RequestParam("file") MultipartFile file) {
+        try {
+            List<DeviceImportDTO> importList = excelService.parseDeviceImport(file);
+            int count = deviceService.importDevices(importList);
+            return ResponseEntity.ok(count);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(0);
+        }
+    }
+
+    /**
+     * 导出设备为 Excel (.xlsx)
+     * GET /devices/export?type=xxx&status=xxx&keyword=xxx
+     */
     @GetMapping("/export")
     @RequirePermission(resource = "devices", action = "read")
     public ResponseEntity<byte[]> export(DeviceQuery query) {
-        List<Device> devices = deviceService.exportDevices(query);
-        StringBuilder csv = new StringBuilder("ID,编号,名称,类型,状态,位置,网格ID,厂家,安装日期,最后检查,最后维护\n");
-        for (Device d : devices) {
-            csv.append(d.getId()).append(",")
-               .append(d.getCode()).append(",")
-               .append(d.getName()).append(",")
-               .append(d.getType()).append(",")
-               .append(d.getStatus()).append(",")
-               .append(d.getLocation()).append(",")
-               .append(d.getGridId()).append(",")
-               .append(d.getManufacturer()).append(",")
-               .append(d.getInstallDate()).append(",")
-               .append(d.getLastCheck()).append(",")
-               .append(d.getLastMaintenance()).append("\n");
+        try {
+            List<Device> devices = deviceService.exportDevices(query);
+            byte[] excelBytes = excelService.exportToExcel(devices);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            headers.setContentDispositionFormData("attachment", "devices.xlsx");
+            return ResponseEntity.ok().headers(headers).body(excelBytes);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
-        byte[] bytes = csv.toString().getBytes(StandardCharsets.UTF_8);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        headers.setContentDispositionFormData("attachment", "devices.csv");
-        return ResponseEntity.ok().headers(headers).body(bytes);
     }
 }

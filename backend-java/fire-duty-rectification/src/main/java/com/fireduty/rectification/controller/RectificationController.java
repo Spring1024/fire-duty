@@ -52,6 +52,12 @@ public class RectificationController {
         return Result.success(rectificationService.uploadPhoto(id, req.type(), req.url()));
     }
 
+    @PutMapping("/{id}/archive")
+    @RequirePermission(resource = "rectifications", action = "write")
+    public Result<Rectification> archive(@PathVariable Long id) {
+        return Result.success(rectificationService.archive(id));
+    }
+
     public record SubmitFixRequest(String comment) {}
     public record ReviewRequest(boolean approved, String comment) {}
     public record PhotoRequest(String type, String url) {}

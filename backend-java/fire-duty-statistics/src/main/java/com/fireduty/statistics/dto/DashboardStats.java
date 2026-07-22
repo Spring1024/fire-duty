@@ -1,15 +1,21 @@
 package com.fireduty.statistics.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class DashboardStats {
-    private int totalDevices = 568;
-    private double onlineRate = 93.7;
-    private int todayInspections = 45;
-    private int pendingRectifications = 8;
-    private double completionRate = 71.1;
-    private int plannedTasks = 63;
-    private int completedTasks = 45;
-    private int overdueTasks = 18;
+    private int totalDevices;
+    private double onlineRate;
+    private int todayInspections;
+    private int pendingRectifications;
+    private double completionRate;
+    private int plannedTasks;
+    private int completedTasks;
+    private int overdueTasks;
 }

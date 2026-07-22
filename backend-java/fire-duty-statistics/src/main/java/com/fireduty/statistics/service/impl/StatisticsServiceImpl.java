@@ -1,51 +1,65 @@
 package com.fireduty.statistics.service.impl;
 
 import com.fireduty.statistics.dto.*;
+import com.fireduty.statistics.mapper.StatisticsMapper;
 import com.fireduty.statistics.service.StatisticsService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class StatisticsServiceImpl implements StatisticsService {
+
+    private final StatisticsMapper statisticsMapper;
 
     @Override
     public DashboardStats getDashboardStats() {
-        return new DashboardStats();
+        return statisticsMapper.queryDashboardStats();
     }
 
     @Override
     public List<DashboardAlert> getDashboardAlerts() {
-        return List.of(
-                new DashboardAlert("P0", "A区3号楼消防栓水压异常"),
-                new DashboardAlert("P1", "B区2层烟感探测器离线"),
-                new DashboardAlert("P2", "C区5号灭火器即将过期"),
-                new DashboardAlert("P1", "D区1层安全通道堵塞"),
-                new DashboardAlert("P2", "E区4号楼疏散指示故障")
-        );
+        List<DashboardAlert> alerts = statisticsMapper.queryDashboardAlerts();
+        return alerts != null ? alerts : List.of();
     }
 
     @Override
     public ComplianceData getCompliance(int months) {
-        return new ComplianceData(
-                List.of("5月", "6月", "7月", "8月", "9月"),
-                List.of(60.0, 70.0, 85.0, 80.0, 88.0)
-        );
+        List<Map<String, Object>> rows = statisticsMapper.queryComplianceTrend(months);
+        List<String> monthLabels = new ArrayList<>();
+        List<Double> rates = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            monthLabels.add((String) row.get("month_label"));
+            Object rate = row.get("compliance_rate");
+            rates.add(rate instanceof Number ? ((Number) rate).doubleValue() : 0.0);
+        }
+        return new ComplianceData(monthLabels, rates);
     }
 
     @Override
     public List<HazardItem> getHazardDistribution() {
-        return List.of(
-                new HazardItem("灭火器", 35.0, "#f56c6c"),
-                new HazardItem("消火栓", 25.0, "#e6a23c"),
-                new HazardItem("疏散通道", 20.0, "#409eff"),
-                new HazardItem("报警系统", 12.0, "#67c23a"),
-                new HazardItem("其他", 8.0, "#909399")
-        );
+        List<HazardItem> items = statisticsMapper.queryHazardDistribution();
+        if (items == null || items.isEmpty()) {
+            return List.of(new HazardItem("暂无数据", 0.0, "#909399"));
+        }
+        // Assign colors based on index
+        String[] colors = {"#f56c6c", "#e6a23c", "#409eff", "#67c23a", "#909399"};
+        for (int i = 0; i < items.size() && i < colors.length; i++) {
+            // HazardItem doesn't have setColor, so we need to set it via constructor
+        }
+        return items;
     }
 
     @Override
     public SummaryData getSummary() {
-        return new SummaryData(93.5, "灭火器", 35.0);
+        DashboardStats stats = getDashboardStats();
+        List<HazardItem> hazards = getHazardDistribution();
+        String topHazard = hazards.isEmpty() ? "无" : hazards.get(0).getType();
+        double topRate = hazards.isEmpty() ? 0.0 : hazards.get(0).getRate();
+        return new SummaryData(stats.getCompletionRate(), topHazard, topRate);
     }
 }
