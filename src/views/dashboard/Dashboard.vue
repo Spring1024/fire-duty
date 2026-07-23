@@ -125,37 +125,38 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { Monitor, TopRight, Check, WarningFilled } from '@element-plus/icons-vue'
 import { useDashboardStore } from '@/stores/dashboard'
 
 const dashboardStore = useDashboardStore()
-const { stats, alerts } = dashboardStore
+const { stats, alerts } = storeToRefs(dashboardStore)
 
 const statCards = computed(() => [
   {
     label: '设备总数',
-    value: String(1),
+    value: String(stats.value.totalDevices),
     color: '#1890ff',
     bgColor: '#e6f7ff',
     icon: Monitor,
   },
   {
     label: '在线率',
-    value: 4 + '%',
+    value: (stats.value.onlineRate || 0) + '%',
     color: '#52c41a',
     bgColor: '#f6ffed',
     icon: TopRight,
   },
   {
     label: '今日巡检',
-    value: String(2),
+    value: String(stats.value.todayInspections),
     color: '#1890ff',
     bgColor: '#e6f7ff',
     icon: Check,
   },
   {
     label: '待整改',
-    value: String(3),
+    value: String(stats.value.pendingRectifications),
     color: '#f56c6c',
     bgColor: '#fff1f0',
     icon: WarningFilled,

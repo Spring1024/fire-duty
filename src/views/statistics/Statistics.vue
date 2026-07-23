@@ -137,10 +137,11 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useStatisticsStore } from '@/stores/statistics'
 
 const statisticsStore = useStatisticsStore()
-const { compliance, hazardDistribution, summary } = statisticsStore
+const { compliance, hazardDistribution, summary } = storeToRefs(statisticsStore)
 
 const barColors = ['#f56c6c', '#e6a23c', '#409eff', '#67c23a', '#909399']
 
