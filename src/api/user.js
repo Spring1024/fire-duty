@@ -11,3 +11,9 @@ export const updateUserAPI = (id, data) => request.put(`/users/${id}`, data)
 
 /** 删除用户 */
 export const deleteUserAPI = (id) => request.delete(`/users/${id}`)
+
+/** 获取所有角色列表 */
+export const getRolesAPI = () => request.get('/users/roles')
+
+/** 获取用户的角色名称列表 */
+export const getUserRolesAPI = (id) => request.get(`/users/${id}/roles`)

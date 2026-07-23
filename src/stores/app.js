@@ -8,6 +8,7 @@ export const useAppStore = defineStore('app', {
       name: '',
       username: '',
       role: '',
+      roles: [],
       avatar: '',
     },
     sidebarCollapsed: false,
@@ -31,6 +32,7 @@ export const useAppStore = defineStore('app', {
         name: userInfo?.name || credentials.username,
         username: userInfo?.username || credentials.username,
         role: userInfo?.role || '',
+        roles: userInfo?.roles || [],
         avatar: userInfo?.avatar || '',
       }
 
@@ -44,6 +46,7 @@ export const useAppStore = defineStore('app', {
           name: res.data?.name || '',
           username: res.data?.username || '',
           role: res.data?.role || '',
+          roles: res.data?.roles || [],
           avatar: res.data?.avatar || '',
         }
       } catch (err) {
@@ -52,7 +55,7 @@ export const useAppStore = defineStore('app', {
     },
 
     logout() {
-      this.user = { name: '', username: '', role: '', avatar: '' }
+      this.user = { name: '', username: '', role: '', roles: [], avatar: '' }
       localStorage.removeItem('token')
       localStorage.removeItem('refreshToken')
     },

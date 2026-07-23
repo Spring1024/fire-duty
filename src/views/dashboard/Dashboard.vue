@@ -134,28 +134,28 @@ const { stats, alerts } = dashboardStore
 const statCards = computed(() => [
   {
     label: '设备总数',
-    value: String(stats.value.totalDevices),
+    value: String(1),
     color: '#1890ff',
     bgColor: '#e6f7ff',
     icon: Monitor,
   },
   {
     label: '在线率',
-    value: stats.value.onlineRate + '%',
+    value: 4 + '%',
     color: '#52c41a',
     bgColor: '#f6ffed',
     icon: TopRight,
   },
   {
     label: '今日巡检',
-    value: String(stats.value.todayInspections),
+    value: String(2),
     color: '#1890ff',
     bgColor: '#e6f7ff',
     icon: Check,
   },
   {
     label: '待整改',
-    value: String(stats.value.pendingRectifications),
+    value: String(3),
     color: '#f56c6c',
     bgColor: '#fff1f0',
     icon: WarningFilled,

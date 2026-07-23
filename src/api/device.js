@@ -33,3 +33,6 @@ export const exportDevicesAPI = (params) =>
     params,
     responseType: 'blob',
   })
+
+/** 获取设备类型列表 */
+export const getDeviceTypesAPI = () => request.get('/devices/types')

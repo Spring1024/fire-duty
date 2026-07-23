@@ -15,16 +15,15 @@
       <el-table-column prop="username" label="用户名" width="130" />
       <el-table-column label="角色" width="150">
         <template #default="{ row }">
-          <el-tag :type="row.roleType" effect="plain" size="small">{{ row.role }}</el-tag>
+          <el-tag :type="roleTagType(row.roleName)" effect="plain" size="small">{{ row.roleName || '—' }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="grid" label="所属网格" width="150" />
       <el-table-column prop="phone" label="手机号" width="130" />
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
           <span class="status-cell">
-            <span :class="['status-dot', row.status === '正常' ? 'dot-green' : 'dot-gray']" />
-            {{ row.status }}
+            <span :class="['status-dot', row.status === 1 ? 'dot-green' : 'dot-gray']" />
+            {{ row.status === 1 ? '正常' : '停用' }}
           </span>
         </template>
       </el-table-column>
@@ -49,25 +48,29 @@
         <el-form-item label="用户名" prop="username" required>
           <el-input v-model="form.username" placeholder="请输入用户名" />
         </el-form-item>
-        <el-form-item label="角色" prop="role" required>
-          <el-select v-model="form.role" placeholder="请选择角色" style="width: 100%">
-            <el-option label="超级管理员" value="超级管理员" />
-            <el-option label="大网格负责人" value="大网格负责人" />
-            <el-option label="中网格组长" value="中网格组长" />
-            <el-option label="小网格检查员" value="小网格检查员" />
-            <el-option label="维保单位" value="维保单位" />
+        <el-form-item label="密码" prop="password" :required="!isEditing">
+          <el-input v-model="form.password" type="password" :placeholder="isEditing ? '留空则不修改' : '请输入密码'" />
+        </el-form-item>
+        <el-form-item label="角色" prop="roleId" required>
+          <el-select v-model="form.roleId" placeholder="请选择角色" style="width: 100%">
+            <el-option
+              v-for="role in roleOptions"
+              :key="role.id"
+              :label="role.name"
+              :value="role.id"
+            />
           </el-select>
         </el-form-item>
-        <el-form-item label="所属网格" prop="grid">
-          <el-input v-model="form.grid" placeholder="请输入所属网格" />
+        <el-form-item label="所属网格" prop="gridId">
+          <el-input v-model="form.gridId" placeholder="请输入网格ID" />
         </el-form-item>
         <el-form-item label="手机号" prop="phone">
           <el-input v-model="form.phone" placeholder="请输入手机号" />
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="form.status" placeholder="请选择状态" style="width: 100%">
-            <el-option label="正常" value="正常" />
-            <el-option label="停用" value="停用" />
+            <el-option label="正常" :value="1" />
+            <el-option label="停用" :value="0" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -83,12 +86,36 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { getRolesAPI, getUserRolesAPI } from '@/api/user'
 
 const userStore = useUserStore()
 
 const userList = computed(() => userStore.userList)
 const loading = computed(() => userStore.loading)
 const total = computed(() => userStore.total)
+
+// ---------- Role Options ----------
+const roleOptions = ref([])
+
+async function fetchRoles() {
+  try {
+    const res = await getRolesAPI()
+    roleOptions.value = res.data || []
+  } catch (err) {
+    console.error('获取角色列表失败:', err)
+  }
+}
+
+function roleTagType(roleName) {
+  const map = {
+    '超级管理员': 'danger',
+    '大网格负责人': '',
+    '中网格组长': 'success',
+    '小网格检查员': 'warning',
+    '维保单位': 'info',
+  }
+  return map[roleName] || ''
+}
 
 // ---------- Dialog ----------
 const dialogVisible = ref(false)
@@ -99,10 +126,11 @@ const submitting = ref(false)
 const defaultForm = {
   name: '',
   username: '',
-  role: '',
-  grid: '',
+  password: '',
+  roleId: null,
+  gridId: null,
   phone: '',
-  status: '正常',
+  status: 1,
 }
 
 const form = ref({ ...defaultForm })
@@ -118,15 +146,27 @@ function handleAdd() {
   dialogVisible.value = true
 }
 
-function handleEdit(row) {
+async function handleEdit(row) {
   isEditing.value = true
   editingId.value = row.id
+  // 获取用户当前角色ID
+  let roleId = null
+  try {
+    const res = await getUserRolesAPI(row.id)
+    const roleNames = res.data || []
+    // 根据角色名称找到对应的 roleId
+    const matchedRole = roleOptions.value.find(r => roleNames.includes(r.name))
+    roleId = matchedRole ? matchedRole.id : null
+  } catch (err) {
+    console.error('获取用户角色失败:', err)
+  }
+
   form.value = {
     name: row.name,
     username: row.username,
-    role: row.role,
-    roleType: row.roleType,
-    grid: row.grid,
+    password: '',
+    roleId: roleId,
+    gridId: row.gridId,
     phone: row.phone,
     status: row.status,
   }
@@ -134,8 +174,12 @@ function handleEdit(row) {
 }
 
 async function handleSubmit() {
-  if (!form.value.name || !form.value.username || !form.value.role) {
+  if (!form.value.name || !form.value.username || !form.value.roleId) {
     ElMessage.warning('请填写完整信息')
+    return
+  }
+  if (!isEditing.value && !form.value.password) {
+    ElMessage.warning('请输入密码')
     return
   }
   submitting.value = true
@@ -174,6 +218,7 @@ async function handleDelete(row) {
 // ---------- Lifecycle ----------
 onMounted(() => {
   userStore.fetchUsers()
+  fetchRoles()
 })
 </script>
 

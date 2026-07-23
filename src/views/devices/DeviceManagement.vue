@@ -68,14 +68,14 @@
         >
           <el-table-column prop="code" label="设备编码" width="130" />
           <el-table-column prop="name" label="名称" min-width="160" />
-          <el-table-column prop="type" label="类型" width="120">
+          <el-table-column prop="deviceTypeName" label="类型" width="120">
             <template #default="{ row }">
               <el-tag
-                :type="typeTagType(row.type)"
+                :type="typeTagType(row.deviceTypeName)"
                 size="small"
                 effect="plain"
               >
-                {{ row.type }}
+                {{ row.deviceTypeName }}
               </el-tag>
             </template>
           </el-table-column>
@@ -120,7 +120,7 @@
         </div>
         <div class="detail-item">
           <span class="detail-label">类型</span>
-          <span class="detail-value">{{ currentDevice.type }}</span>
+          <span class="detail-value">{{ currentDevice.deviceTypeName }}</span>
         </div>
         <div class="detail-item">
           <span class="detail-label">位置</span>
