@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 
 import javax.crypto.SecretKey;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -67,11 +68,25 @@ public class JwtAuthGatewayFilterFactory extends AbstractGatewayFilterFactory<Ob
                 Claims claims = jws.getPayload();
 
                 // Forward user info to downstream services via headers
+                String userId = claims.getSubject();
+                String userName = claims.get("username", String.class);
+                String userRole = claims.get("role", String.class);
+
+                log.debug("JWT解析成功: userId={}, userName={}, role={}", userId, userName, userRole);
+
                 ServerWebExchange mutatedExchange = exchange.mutate()
                         .request(r -> r.headers(headers -> {
-                            headers.set("X-User-Id", claims.get("userId", String.class));
-                            headers.set("X-User-Name", claims.get("username", String.class));
-                            headers.set("X-User-Role", claims.get("role", String.class));
+                            if (userId != null) {
+                                headers.set("X-User-Id", userId);
+                            }
+                            if (userName != null) {
+                                headers.set("X-User-Name",
+                                        URLEncoder.encode(userName, StandardCharsets.UTF_8));
+                            }
+                            if (userRole != null) {
+                                headers.set("X-User-Role",
+                                        URLEncoder.encode(userRole, StandardCharsets.UTF_8));
+                            }
                         }))
                         .build();
                 return chain.filter(mutatedExchange);
@@ -81,6 +96,6 @@ public class JwtAuthGatewayFilterFactory extends AbstractGatewayFilterFactory<Ob
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                 return exchange.getResponse().setComplete();
             }
-        }, Ordered.LOWEST_PRECEDENCE);
+        }, -1);  // 必须在 NettyRoutingFilter(LOWEST_PRECEDENCE) 之前执行，否则请求会先被转发到下游
     }
 }

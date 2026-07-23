@@ -1,5 +1,6 @@
 package com.fireduty.user.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fireduty.common.annotation.RequirePermission;
 import com.fireduty.common.response.Result;
 import com.fireduty.user.dto.CreateUserRequest;

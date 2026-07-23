@@ -34,7 +34,7 @@ public class StatisticsController {
 
     @GetMapping("/compliance")
     @RequirePermission(resource = "statistics", action = "read")
-    public Result<ComplianceData> compliance(@RequestParam(defaultValue = "6") int months) {
+    public Result<ComplianceData> compliance(@RequestParam(value = "months", defaultValue = "6") Integer months) {
         return Result.success(statisticsService.getCompliance(months));
     }
 

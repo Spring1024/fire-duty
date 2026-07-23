@@ -58,22 +58,23 @@ public interface StatisticsMapper {
                 TO_CHAR(stat_date, 'MM"月"') AS month_label,
                 compliance_rate
             FROM stats_daily_compliance
-            WHERE stat_date >= CURRENT_DATE - INTERVAL '#{months} months'
+            WHERE stat_date >= CURRENT_DATE - INTERVAL '1 month' * #{months}
             ORDER BY stat_date ASC
             """)
     List<Map<String, Object>> queryComplianceTrend(int months);
 
     /**
-     * 隐患分布：按整改单的 device_type 分组统计
+     * 隐患分布：按整改单关联的设备类型分组统计
      */
     @Select("""
             SELECT
-                COALESCE(d.type, '其他') AS hazard_type,
+                COALESCE(dt.name, '其他') AS hazard_type,
                 COUNT(*) AS cnt,
                 ROUND(COUNT(*)::DECIMAL / GREATEST((SELECT COUNT(*) FROM rectifications), 1) * 100, 1) AS percentage
             FROM rectifications r
             LEFT JOIN devices d ON r.device_id = d.id
-            GROUP BY d.type
+            LEFT JOIN device_types dt ON d.device_type_id = dt.id
+            GROUP BY dt.name
             ORDER BY cnt DESC
             """)
     List<HazardItem> queryHazardDistribution();

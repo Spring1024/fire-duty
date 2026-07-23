@@ -12,4 +12,6 @@ public class CreateUserRequest {
     private Long gridId;
     private String gridName;
     private String phone;
+    /** 状态（1正常 0停用），不传默认正常 */
+    private Integer status;
 }

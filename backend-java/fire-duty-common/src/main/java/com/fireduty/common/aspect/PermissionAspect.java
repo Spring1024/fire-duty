@@ -16,6 +16,8 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.lang.reflect.Method;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 /**
  * AOP 切面：拦截所有带 @RequirePermission 注解的方法，
@@ -77,16 +79,16 @@ public class PermissionAspect {
 
         HttpServletRequest request = attributes.getRequest();
 
-        // 1) Gateway 注入的 JWT 角色
+        // 1) Gateway 注入的 JWT 角色（Gateway 端已做 URLEncode，这里需要解码）
         String role = request.getHeader("X-User-Role");
         if (role != null && !role.isBlank()) {
-            return role;
+            return URLDecoder.decode(role, StandardCharsets.UTF_8);
         }
 
         // 2) 兼容旧版 header
         role = request.getHeader("X-Role");
         if (role != null && !role.isBlank()) {
-            return role;
+            return URLDecoder.decode(role, StandardCharsets.UTF_8);
         }
 
         // 3) request attribute（其他过滤器设置）

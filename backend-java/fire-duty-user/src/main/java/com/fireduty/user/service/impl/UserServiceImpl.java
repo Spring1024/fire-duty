@@ -63,7 +63,7 @@ public class UserServiceImpl implements UserService {
         user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
         user.setGridId(req.getGridId());
         user.setPhone(req.getPhone());
-        user.setStatus(1);
+        user.setStatus(req.getStatus() != null ? req.getStatus() : 1);
         userMapper.insert(user);
 
         // 分配角色

@@ -32,8 +32,8 @@ public class DeviceController {
 
     @GetMapping
     @RequirePermission(resource = "devices", action = "read")
-    public ResponseEntity<IPage<DeviceDTO>> page(DeviceQuery query) {
-        return ResponseEntity.ok(deviceService.queryPage(query));
+    public IPage<DeviceDTO> page(DeviceQuery query) {
+        return deviceService.queryPage(query);
     }
 
     @GetMapping("/{id}")
@@ -70,7 +70,7 @@ public class DeviceController {
 
     @GetMapping("/tree")
     @RequirePermission(resource = "devices", action = "read")
-    public ResponseEntity<List<Map<String, Object>>> tree() {
+    public List<Map<String, Object>> tree() {
         List<Device> allDevices = deviceService.getDeviceTree();
         Map<Long, List<Device>> grouped = allDevices.stream()
                 .collect(Collectors.groupingBy(d -> d.getGridId() != null ? d.getGridId() : 0L));
@@ -84,7 +84,7 @@ public class DeviceController {
                     "count", devices.size()
             );
         }).collect(Collectors.toList());
-        return ResponseEntity.ok(tree);
+        return tree;
     }
 
     /**
