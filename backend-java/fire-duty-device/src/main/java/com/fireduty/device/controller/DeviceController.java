@@ -6,6 +6,7 @@ import com.fireduty.device.dto.DeviceDTO;
 import com.fireduty.device.dto.DeviceImportDTO;
 import com.fireduty.device.dto.DeviceQuery;
 import com.fireduty.device.entity.Device;
+import com.fireduty.device.entity.DeviceType;
 import com.fireduty.device.service.DeviceService;
 import com.fireduty.device.service.ExcelService;
 import com.fireduty.device.service.QrCodeService;
@@ -31,7 +32,7 @@ public class DeviceController {
 
     @GetMapping
     @RequirePermission(resource = "devices", action = "read")
-    public ResponseEntity<IPage<Device>> page(DeviceQuery query) {
+    public ResponseEntity<IPage<DeviceDTO>> page(DeviceQuery query) {
         return ResponseEntity.ok(deviceService.queryPage(query));
     }
 
@@ -41,6 +42,12 @@ public class DeviceController {
         DeviceDTO dto = deviceService.getById(id);
         if (dto == null) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping("/types")
+    @RequirePermission(resource = "devices", action = "read")
+    public ResponseEntity<List<DeviceType>> listTypes() {
+        return ResponseEntity.ok(deviceService.listDeviceTypes());
     }
 
     @PostMapping
@@ -72,7 +79,7 @@ public class DeviceController {
             List<Device> devices = entry.getValue();
             return Map.of(
                     "gridId", gridId,
-                    "gridPath", devices.get(0).getGridPath(),
+                    "gridPath", devices.get(0).getGridPath() != null ? devices.get(0).getGridPath() : "",
                     "devices", devices,
                     "count", devices.size()
             );
@@ -82,7 +89,6 @@ public class DeviceController {
 
     /**
      * 生成设备二维码图片
-     * GET /devices/{id}/qrcode
      */
     @GetMapping("/{id}/qrcode")
     @RequirePermission(resource = "devices", action = "read")
@@ -90,7 +96,6 @@ public class DeviceController {
         DeviceDTO device = deviceService.getById(id);
         if (device == null) return ResponseEntity.notFound().build();
 
-        // 二维码内容：设备信息 URL（或设备编码）
         String content = "fireduty://device/" + device.getCode();
         byte[] qrImage = qrCodeService.generateQrCode(content, 300, 300);
 
@@ -102,7 +107,6 @@ public class DeviceController {
 
     /**
      * 批量导入设备（支持 Excel .xlsx 上传）
-     * POST /devices/import
      */
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @RequirePermission(resource = "devices", action = "write")
@@ -118,13 +122,12 @@ public class DeviceController {
 
     /**
      * 导出设备为 Excel (.xlsx)
-     * GET /devices/export?type=xxx&status=xxx&keyword=xxx
      */
     @GetMapping("/export")
     @RequirePermission(resource = "devices", action = "read")
     public ResponseEntity<byte[]> export(DeviceQuery query) {
         try {
-            List<Device> devices = deviceService.exportDevices(query);
+            List<DeviceDTO> devices = deviceService.exportDevices(query);
             byte[] excelBytes = excelService.exportToExcel(devices);
 
             HttpHeaders headers = new HttpHeaders();

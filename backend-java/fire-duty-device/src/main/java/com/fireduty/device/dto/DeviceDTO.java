@@ -14,7 +14,10 @@ public class DeviceDTO {
 
     private String name;
 
-    private String type;
+    private Long deviceTypeId;
+
+    /** 设备类型名称（关联查询填充） */
+    private String deviceTypeName;
 
     private Integer status;
 

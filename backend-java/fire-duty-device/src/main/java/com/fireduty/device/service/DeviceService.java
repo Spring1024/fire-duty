@@ -6,48 +6,54 @@ import com.fireduty.device.dto.DeviceDTO;
 import com.fireduty.device.dto.DeviceImportDTO;
 import com.fireduty.device.dto.DeviceQuery;
 import com.fireduty.device.entity.Device;
+import com.fireduty.device.entity.DeviceType;
 
 import java.util.List;
 
 public interface DeviceService extends IService<Device> {
 
     /**
-     * Paginated device query
+     * 分页查询设备（含类型名称）
      */
-    IPage<Device> queryPage(DeviceQuery query);
+    IPage<DeviceDTO> queryPage(DeviceQuery query);
 
     /**
-     * Get device by ID
+     * 根据ID获取设备详情（含类型名称）
      */
     DeviceDTO getById(Long id);
 
     /**
-     * Create device
+     * 新增设备
      */
     boolean addDevice(DeviceDTO deviceDTO);
 
     /**
-     * Update device
+     * 更新设备
      */
     boolean updateDevice(Long id, DeviceDTO deviceDTO);
 
     /**
-     * Delete device by ID
+     * 删除设备
      */
     boolean removeDevice(Long id);
 
     /**
-     * Get device tree (grouped by grid)
+     * 获取设备树（按网格分组）
      */
     List<Device> getDeviceTree();
 
     /**
-     * Batch import devices
+     * 批量导入设备
      */
     int importDevices(List<DeviceImportDTO> importDTOList);
 
     /**
-     * Export devices (all matching query)
+     * 导出设备（含类型名称）
      */
-    List<Device> exportDevices(DeviceQuery query);
+    List<DeviceDTO> exportDevices(DeviceQuery query);
+
+    /**
+     * 获取所有设备类型
+     */
+    List<DeviceType> listDeviceTypes();
 }

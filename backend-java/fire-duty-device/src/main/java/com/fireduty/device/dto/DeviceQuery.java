@@ -9,7 +9,7 @@ public class DeviceQuery {
 
     private Integer pageSize = 20;
 
-    private String type;
+    private Long deviceTypeId;
 
     private Integer status;
 

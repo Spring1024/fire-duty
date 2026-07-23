@@ -17,7 +17,8 @@ public class Device {
 
     private String name;
 
-    private String type;
+    @TableField("device_type_id")
+    private Long deviceTypeId;
 
     private Integer status;
 

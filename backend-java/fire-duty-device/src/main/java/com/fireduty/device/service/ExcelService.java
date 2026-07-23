@@ -1,5 +1,6 @@
 package com.fireduty.device.service;
 
+import com.fireduty.device.dto.DeviceDTO;
 import com.fireduty.device.dto.DeviceImportDTO;
 import com.fireduty.device.entity.Device;
 import org.apache.poi.ss.usermodel.*;
@@ -56,7 +57,7 @@ public class ExcelService {
     /**
      * Export devices to Excel bytes.
      */
-    public byte[] exportToExcel(List<Device> devices) throws IOException {
+    public byte[] exportToExcel(List<DeviceDTO> devices) throws IOException {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("设备列表");
 
@@ -75,14 +76,14 @@ public class ExcelService {
 
             // Data rows
             for (int i = 0; i < devices.size(); i++) {
-                Device d = devices.get(i);
+                DeviceDTO d = devices.get(i);
                 Row dataRow = sheet.createRow(i + 1);
-                dataRow.createCell(0).setCellValue(d.getCode());
-                dataRow.createCell(1).setCellValue(d.getName());
-                dataRow.createCell(2).setCellValue(d.getType());
-                dataRow.createCell(3).setCellValue(d.getStatus());
-                dataRow.createCell(4).setCellValue(d.getLocation());
-                dataRow.createCell(5).setCellValue(d.getManufacturer());
+                dataRow.createCell(0).setCellValue(d.getCode() != null ? d.getCode() : "");
+                dataRow.createCell(1).setCellValue(d.getName() != null ? d.getName() : "");
+                dataRow.createCell(2).setCellValue(d.getDeviceTypeName() != null ? d.getDeviceTypeName() : "");
+                dataRow.createCell(3).setCellValue(d.getStatus() != null ? String.valueOf(d.getStatus()) : "");
+                dataRow.createCell(4).setCellValue(d.getLocation() != null ? d.getLocation() : "");
+                dataRow.createCell(5).setCellValue(d.getManufacturer() != null ? d.getManufacturer() : "");
                 dataRow.createCell(6).setCellValue(d.getInstallDate() != null ? d.getInstallDate().toString() : "");
                 dataRow.createCell(7).setCellValue(d.getLastCheck() != null ? d.getLastCheck().toString() : "");
                 dataRow.createCell(8).setCellValue(d.getQrCode() != null ? d.getQrCode() : "");

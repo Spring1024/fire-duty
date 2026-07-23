@@ -13,12 +13,15 @@ public class User {
     private String passwordHash;
     private String name;
     private String phone;
-    private String role;
     private Long gridId;
-    private String status;
+    private Integer status;
     private LocalDateTime lastLogin;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
+
+    /** 角色名称（非数据库字段，关联查询填充） */
+    @TableField(exist = false)
+    private String roleName;
 }

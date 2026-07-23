@@ -24,9 +24,6 @@ public class User {
     @TableField("phone")
     private String phone;
 
-    @TableField("role")
-    private String role;
-
     @TableField("grid_id")
     private Long gridId;
 

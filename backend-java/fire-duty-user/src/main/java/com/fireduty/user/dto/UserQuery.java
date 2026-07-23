@@ -6,7 +6,8 @@ import lombok.Data;
 public class UserQuery {
     private int page = 1;
     private int pageSize = 20;
-    private String role;
-    private String status;
+    /** 按角色ID筛选 */
+    private Long roleId;
+    private Integer status;
     private String search;
 }

@@ -1,12 +1,14 @@
 server:
   port: 8081
 spring:
+  flyway:
+    enabled: false
   application:
     name: fire-duty-auth
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:fire_duty}
+    url: jdbc:postgresql://${DB_HOST:192.168.32.156}:${DB_PORT:15432}/${DB_NAME:fire_duty}
     username: ${DB_USER:fire_duty}
-    password: ${DB_PASS:fire_duty_pass}
+    password: ${DB_PASS:gpte1956}
     driver-class-name: org.postgresql.Driver
   security:
     oauth2:

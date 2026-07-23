@@ -22,11 +22,17 @@ public class UserInfoDTO {
 
     private String phone;
 
-    private String role;
+    /** 角色名称列表（支持多角色） */
+    private List<String> roles;
 
     private List<String> authorities;
 
     private Long gridId;
 
     private LocalDateTime lastLogin;
+
+    /** 兼容旧接口：返回第一个角色 */
+    public String getRole() {
+        return (roles != null && !roles.isEmpty()) ? roles.get(0) : null;
+    }
 }

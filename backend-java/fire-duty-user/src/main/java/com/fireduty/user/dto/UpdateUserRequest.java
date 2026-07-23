@@ -7,9 +7,10 @@ public class UpdateUserRequest {
     private String name;
     private String username;
     private String password;
-    private String role;
+    /** 角色ID（关联 roles 表） */
+    private Long roleId;
     private Long gridId;
     private String gridName;
     private String phone;
-    private String status;
+    private Integer status;
 }

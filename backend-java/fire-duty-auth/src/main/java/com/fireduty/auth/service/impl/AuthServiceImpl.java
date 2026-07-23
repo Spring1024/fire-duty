@@ -13,15 +13,14 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import com.fireduty.auth.dto.PasswordChangeRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -51,8 +50,9 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("用户名或密码错误");
         }
 
-        // 2. 校验密码（简化版，生产环境应使用BCryptPasswordEncoder）
-        if (!request.getPassword().equals(user.getPasswordHash())) {
+        // 2. 校验密码
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            log.warn("用户登录失败，密码错误: {}", request.getUsername());
             throw new RuntimeException("用户名或密码错误");
         }
 
@@ -61,24 +61,27 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("用户已被禁用");
         }
 
-        // 4. 获取用户权限
-        List<String> authorities = getAuthorities(user.getRole());
+        // 4. 查询用户角色（从 user_roles + roles 表）
+        List<String> roles = userMapper.selectRoleNamesByUserId(user.getId());
 
-        // 5. 生成JWT令牌
-        String token = generateToken(user, authorities);
-        String refreshToken = generateRefreshToken(user);
+        // 5. 获取用户权限（聚合所有角色的权限）
+        List<String> authorities = getAuthorities(roles);
 
-        // 6. 更新最后登录时间
+        // 6. 生成JWT令牌
+        String token = generateToken(user, roles, authorities);
+        String refreshToken = generateRefreshToken(user, roles);
+
+        // 7. 更新最后登录时间
         user.setLastLogin(LocalDateTime.now());
         userMapper.updateById(user);
 
-        // 7. 构建返回
+        // 8. 构建返回
         UserInfoDTO userInfo = UserInfoDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .name(user.getName())
                 .phone(user.getPhone())
-                .role(user.getRole())
+                .roles(roles)
                 .authorities(authorities)
                 .gridId(user.getGridId())
                 .lastLogin(user.getLastLogin())
@@ -105,8 +108,6 @@ public class AuthServiceImpl implements AuthService {
                     .getPayload();
 
             Long userId = Long.valueOf(claims.getSubject());
-            String username = claims.get("username", String.class);
-            String role = claims.get("role", String.class);
 
             // 2. 重新查询用户
             User user = userMapper.selectById(userId);
@@ -114,17 +115,18 @@ public class AuthServiceImpl implements AuthService {
                 throw new RuntimeException("用户不存在或已被禁用");
             }
 
-            // 3. 获取权限并生成新令牌
-            List<String> authorities = getAuthorities(role);
-            String newToken = generateToken(user, authorities);
-            String newRefreshToken = generateRefreshToken(user);
+            // 3. 重新查询角色和权限
+            List<String> roles = userMapper.selectRoleNamesByUserId(userId);
+            List<String> authorities = getAuthorities(roles);
+            String newToken = generateToken(user, roles, authorities);
+            String newRefreshToken = generateRefreshToken(user, roles);
 
             UserInfoDTO userInfo = UserInfoDTO.builder()
                     .id(user.getId())
                     .username(user.getUsername())
                     .name(user.getName())
                     .phone(user.getPhone())
-                    .role(user.getRole())
+                    .roles(roles)
                     .authorities(authorities)
                     .gridId(user.getGridId())
                     .lastLogin(user.getLastLogin())
@@ -152,14 +154,15 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("用户不存在");
         }
 
-        List<String> authorities = getAuthorities(user.getRole());
+        List<String> roles = userMapper.selectRoleNamesByUserId(userId);
+        List<String> authorities = getAuthorities(roles);
 
         return UserInfoDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .name(user.getName())
                 .phone(user.getPhone())
-                .role(user.getRole())
+                .roles(roles)
                 .authorities(authorities)
                 .gridId(user.getGridId())
                 .lastLogin(user.getLastLogin())
@@ -175,20 +178,11 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("用户不存在");
         }
 
-        // 验证旧密码（兼容 bcrypt 和明文存储）
-        boolean passwordMatch;
-        if (user.getPasswordHash().startsWith("$2a$") || user.getPasswordHash().startsWith("$2b$")
-                || user.getPasswordHash().startsWith("$2y$")) {
-            passwordMatch = passwordEncoder.matches(oldPassword, user.getPasswordHash());
-        } else {
-            passwordMatch = oldPassword.equals(user.getPasswordHash());
-        }
-
-        if (!passwordMatch) {
+        if (!passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
+            log.warn("修改密码失败，旧密码错误 userId={}", userId);
             throw new RuntimeException("旧密码错误");
         }
 
-        // 更新新密码（bcrypt 加密）
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userMapper.updateById(user);
 
@@ -198,10 +192,13 @@ public class AuthServiceImpl implements AuthService {
     /**
      * 生成JWT访问令牌
      */
-    private String generateToken(User user, List<String> authorities) {
+    private String generateToken(User user, List<String> roles, List<String> authorities) {
         SecretKey key = getSigningKey();
         Date now = new Date();
         Date expiration = new Date(now.getTime() + jwtConfig.getExpiration());
+
+        // 主角色取第一个（兼容旧逻辑）
+        String primaryRole = (roles != null && !roles.isEmpty()) ? roles.get(0) : "";
 
         return Jwts.builder()
                 .subject(String.valueOf(user.getId()))
@@ -210,7 +207,8 @@ public class AuthServiceImpl implements AuthService {
                 .expiration(expiration)
                 .claim("username", user.getUsername())
                 .claim("name", user.getName())
-                .claim("role", user.getRole())
+                .claim("role", primaryRole)
+                .claim("roles", roles)
                 .claim("authorities", authorities)
                 .signWith(key)
                 .compact();
@@ -219,10 +217,12 @@ public class AuthServiceImpl implements AuthService {
     /**
      * 生成刷新令牌
      */
-    private String generateRefreshToken(User user) {
+    private String generateRefreshToken(User user, List<String> roles) {
         SecretKey key = getSigningKey();
         Date now = new Date();
         Date expiration = new Date(now.getTime() + jwtConfig.getRefreshExpiration());
+
+        String primaryRole = (roles != null && !roles.isEmpty()) ? roles.get(0) : "";
 
         return Jwts.builder()
                 .subject(String.valueOf(user.getId()))
@@ -230,7 +230,8 @@ public class AuthServiceImpl implements AuthService {
                 .issuedAt(now)
                 .expiration(expiration)
                 .claim("username", user.getUsername())
-                .claim("role", user.getRole())
+                .claim("role", primaryRole)
+                .claim("roles", roles)
                 .signWith(key)
                 .compact();
     }
@@ -239,24 +240,25 @@ public class AuthServiceImpl implements AuthService {
      * 获取签名密钥
      */
     private SecretKey getSigningKey() {
-        byte[] keyBytes = Base64.getDecoder().decode(jwtConfig.getSecret());
+        byte[] keyBytes = jwtConfig.getSecret().getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
     /**
-     * 根据角色获取权限列表
+     * 根据角色列表获取权限列表（聚合所有角色的权限）
      */
-    private List<String> getAuthorities(String role) {
-        if (role == null) {
+    private List<String> getAuthorities(List<String> roles) {
+        if (roles == null || roles.isEmpty()) {
             return Collections.emptyList();
         }
 
         try {
             return permissionMapper.selectList(
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.fireduty.auth.entity.Permission>()
-                            .eq(com.fireduty.auth.entity.Permission::getRole, role)
+                            .in(com.fireduty.auth.entity.Permission::getRole, roles)
             ).stream()
                     .map(p -> p.getResource() + ":" + p.getAction())
+                    .distinct()
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.warn("获取权限失败，返回空权限列表", e);

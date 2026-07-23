@@ -18,6 +18,11 @@ public class DeviceType {
 
     private String description;
 
+    private String icon;
+
+    @TableField("sort_order")
+    private Integer sortOrder;
+
     @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 

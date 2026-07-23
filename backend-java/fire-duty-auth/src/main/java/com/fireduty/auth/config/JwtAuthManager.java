@@ -9,10 +9,12 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * JWT认证管理器 — 提供基于用户名密码的认证能力
@@ -22,6 +24,7 @@ import java.util.List;
 public class JwtAuthManager implements AuthenticationManager {
 
     private final UserMapper userMapper;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
@@ -37,8 +40,7 @@ public class JwtAuthManager implements AuthenticationManager {
             throw new BadCredentialsException("用户名或密码错误");
         }
 
-        // 简化密码校验，生产环境应使用BCryptPasswordEncoder
-        if (!password.equals(user.getPasswordHash())) {
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new BadCredentialsException("用户名或密码错误");
         }
 
@@ -46,9 +48,17 @@ public class JwtAuthManager implements AuthenticationManager {
             throw new BadCredentialsException("用户已被禁用");
         }
 
-        List<SimpleGrantedAuthority> authorities = Collections.singletonList(
-                new SimpleGrantedAuthority("ROLE_" + (user.getRole() != null ? user.getRole().toUpperCase() : "USER"))
-        );
+        // 从 user_roles + roles 表查询角色
+        List<String> roles = userMapper.selectRoleNamesByUserId(user.getId());
+
+        List<SimpleGrantedAuthority> authorities;
+        if (roles != null && !roles.isEmpty()) {
+            authorities = roles.stream()
+                    .map(r -> new SimpleGrantedAuthority("ROLE_" + r.toUpperCase()))
+                    .collect(Collectors.toList());
+        } else {
+            authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
+        }
 
         return new UsernamePasswordAuthenticationToken(user, null, authorities);
     }
