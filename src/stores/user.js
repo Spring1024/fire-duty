@@ -16,7 +16,7 @@ export const useUserStore = defineStore('user', () => {
     loading.value = true
     try {
       const res = await getUsersAPI(params)
-      userList.value = res.data?.list || []
+      userList.value = res.data?.records || []
       total.value = res.data?.total || 0
     } catch (err) {
       console.error('获取用户列表失败:', err)

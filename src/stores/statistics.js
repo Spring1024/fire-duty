@@ -18,6 +18,7 @@ export const useStatisticsStore = defineStore('statistics', () => {
 
   async function fetchCompliance(params) {
     try {
+      console.log("params", params)
       const res = await getComplianceTrendAPI(params)
       compliance.value = res.data || []
     } catch (err) {

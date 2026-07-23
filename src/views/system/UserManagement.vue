@@ -35,6 +35,18 @@
       </el-table-column>
     </el-table>
 
+    <!-- Pagination -->
+    <div class="pagination-wrap">
+      <el-pagination
+        v-model:current-page="currentPage"
+        :page-size="pageSize"
+        :total="total"
+        layout="total, prev, pager, next"
+        background
+        @current-change="loadUsers"
+      />
+    </div>
+
     <!-- Add / Edit Dialog -->
     <el-dialog
       v-model="dialogVisible"
@@ -93,6 +105,14 @@ const userStore = useUserStore()
 const userList = computed(() => userStore.userList)
 const loading = computed(() => userStore.loading)
 const total = computed(() => userStore.total)
+
+// ---------- Pagination ----------
+const currentPage = ref(1)
+const pageSize = ref(20)
+
+function loadUsers() {
+  userStore.fetchUsers({ page: currentPage.value, pageSize: pageSize.value })
+}
 
 // ---------- Role Options ----------
 const roleOptions = ref([])
@@ -184,15 +204,20 @@ async function handleSubmit() {
   }
   submitting.value = true
   try {
+    // el-input 的 gridId 是字符串，后端需要 Long；空值统一转为 null
+    const payload = {
+      ...form.value,
+      gridId: form.value.gridId !== '' && form.value.gridId != null ? Number(form.value.gridId) : null,
+    }
     if (isEditing.value) {
-      await userStore.updateUser(editingId.value, form.value)
+      await userStore.updateUser(editingId.value, payload)
       ElMessage.success('用户更新成功')
     } else {
-      await userStore.createUser(form.value)
+      await userStore.createUser(payload)
       ElMessage.success('用户创建成功')
     }
     dialogVisible.value = false
-    userStore.fetchUsers()
+    loadUsers()
   } catch (err) {
     // 错误已在拦截器中统一处理
   } finally {
@@ -209,7 +234,7 @@ async function handleDelete(row) {
     })
     await userStore.deleteUser(row.id)
     ElMessage.success('删除成功')
-    userStore.fetchUsers()
+    loadUsers()
   } catch (err) {
     // cancel or error
   }
@@ -217,7 +242,7 @@ async function handleDelete(row) {
 
 // ---------- Lifecycle ----------
 onMounted(() => {
-  userStore.fetchUsers()
+  loadUsers()
   fetchRoles()
 })
 </script>
@@ -263,5 +288,11 @@ onMounted(() => {
 }
 .dot-gray {
   background: #c0c4cc;
+}
+
+.pagination-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 </style>

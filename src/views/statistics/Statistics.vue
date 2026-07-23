@@ -187,7 +187,7 @@ function getBarHeight(pct) {
 
 onMounted(async () => {
   await Promise.all([
-    statisticsStore.fetchCompliance(),
+    statisticsStore.fetchCompliance({ months: 6 }),
     statisticsStore.fetchHazardDistribution(),
     statisticsStore.fetchSummary(),
   ])

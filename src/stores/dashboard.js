@@ -19,6 +19,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   async function fetchStats() {
     try {
       const res = await getDashboardStatsAPI()
+      console.log("res", res)
       stats.value = {
         totalDevices: res.data?.totalDevices ?? 0,
         onlineRate: res.data?.onlineRate ?? 0,
