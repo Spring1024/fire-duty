@@ -461,3 +461,268 @@ Response:
 }
 ```
 Error codes: 0=OK, 401=Unauthorized, 403=Forbidden, 404=NotFound, 422=ValidationError, 500=InternalError
+
+---
+
+## 9. 法规库（Phase 2 — 新增微服务：fire-duty-regulation）
+
+### GET /laws
+Query: `?page=1&pageSize=20&search=&region=&status=`
+Response:
+```json
+{
+  "code": 0,
+  "data": {
+    "list": [{
+      "id": "string (UUID)",
+      "lawName": "string",
+      "lawCode": "string",
+      "publishDate": "string (date)",
+      "effectiveDate": "string (date)",
+      "region": "string",
+      "version": 1,
+      "status": 1,
+      "articleCount": 12
+    }],
+    "total": 45,
+    "page": 1,
+    "pageSize": 20
+  }
+}
+```
+
+### GET /laws/:id
+Response:
+```json
+{
+  "code": 0,
+  "data": {
+    "id": "string (UUID)",
+    "lawName": "string",
+    "lawCode": "string",
+    "publishDate": "string",
+    "effectiveDate": "string",
+    "region": "string",
+    "regionDetail": "string",
+    "version": 1,
+    "status": 1,
+    "articles": [{
+      "id": "string (UUID)",
+      "articleNo": "string",
+      "content": "string",
+      "category": "string"
+    }]
+  }
+}
+```
+
+### POST /laws
+Request:
+```json
+{
+  "lawName": "string",
+  "lawCode": "string",
+  "publishDate": "string",
+  "effectiveDate": "string",
+  "region": "string",
+  "regionDetail": "string",
+  "status": 1
+}
+```
+
+### PUT /laws/:id
+Request: partial law update payload
+
+### DELETE /laws/:id
+Response: `{ "code": 0 }`
+
+### GET /laws/:id/articles
+Response: same articles array as in law detail
+
+### POST /laws/:id/articles
+Request:
+```json
+{
+  "articleNo": "string",
+  "content": "string",
+  "category": "string"
+}
+```
+
+### POST /rules/match
+Request:
+```json
+{
+  "buildingType": "string (医院|学校|商场|住宅|工厂)",
+  "region": "string (广东省)"
+}
+```
+Response:
+```json
+{
+  "code": 0,
+  "data": [{
+    "ruleId": "string",
+    "lawName": "string",
+    "articleNo": "string",
+    "ruleType": "string",
+    "frequency": "string",
+    "targetRole": "string",
+    "actionTemplate": "string"
+  }]
+}
+```
+
+---
+
+## 10. 双指数评估（Phase 2 — 新增微服务：fire-duty-evaluation）
+
+### GET /evaluation/fpc
+Response:
+```json
+{
+  "code": 0,
+  "data": {
+    "score": 82.5,
+    "level": "L2",
+    "aScore": 78.0,
+    "bScore": 85.0,
+    "cScore": 84.0,
+    "period": "2026-07"
+  }
+}
+```
+
+### GET /evaluation/fpc/trend
+Query: `?months=6`
+Response:
+```json
+{
+  "code": 0,
+  "data": {
+    "periods": ["2026-02","2026-03","2026-04","2026-05","2026-06","2026-07"],
+    "scores": [70.1, 72.3, 74.8, 76.5, 78.2, 82.5],
+    "levels": ["L3","L3","L2","L2","L2","L2"]
+  }
+}
+```
+
+### GET /evaluation/fsd
+Response:
+```json
+{
+  "code": 0,
+  "data": {
+    "score": 76.3,
+    "period": "2026-07",
+    "dScore": 80.0,
+    "eScore": 75.0,
+    "fScore": 78.0,
+    "gScore": 72.0,
+    "hScore": 74.0,
+    "iScore": 70.0
+  }
+}
+```
+
+### GET /evaluation/fsd/trend
+Query: `?months=6`
+Response: same shape as fpc/trend
+
+### POST /evaluation/calculate
+Response:
+```json
+{
+  "code": 0,
+  "data": {
+    "fpc": { "score": 82.5, "level": "L2" },
+    "fsd": { "score": 76.3 }
+  }
+}
+```
+
+### GET /evaluation/overview
+Response:
+```json
+{
+  "code": 0,
+  "data": {
+    "fpc": { "score": 82.5, "level": "L2", "trend": "up" },
+    "fsd": { "score": 76.3, "trend": "up" },
+    "complianceRate": 94.2,
+    "deviceOnlineRate": 96.8
+  }
+}
+```
+
+---
+
+## 11. 档案中心（Phase 2 — 新增微服务：fire-duty-archive）
+
+### GET /archives
+Query: `?page=1&pageSize=20&type=&search=&dateFrom=&dateTo=`
+Response:
+```json
+{
+  "code": 0,
+  "data": {
+    "list": [{
+      "id": "string (UUID)",
+      "title": "string",
+      "type": "string (单位|设备|人员|整改)",
+      "summary": "string",
+      "fileSize": "string (1.2MB)",
+      "status": "string (已归档|生成中)",
+      "createdAt": "string (datetime)"
+    }],
+    "total": 128
+  }
+}
+```
+
+### GET /archives/:id
+Response: full archive detail with download URL
+
+### POST /archives/generate
+Request:
+```json
+{
+  "type": "string (单位|设备|人员|整改)",
+  "tenantId": "string (UUID)",
+  "dateRange": { "from": "string", "to": "string" }
+}
+```
+Response:
+```json
+{
+  "code": 0,
+  "data": {
+    "archiveId": "string (UUID)",
+    "status": "生成中",
+    "estimatedTime": "30秒"
+  }
+}
+```
+
+### GET /archives/export
+Query: `?archiveId=&format=pdf|excel`
+Response: file download
+
+### GET /archives/categories
+Response:
+```json
+{
+  "code": 0,
+  "data": {
+    "categories": [
+      { "type": "单位", "count": 35 },
+      { "type": "设备", "count": 128 },
+      { "type": "人员", "count": 56 },
+      { "type": "整改", "count": 89 }
+    ]
+  }
+}
+```
+
+### DELETE /archives/:id
+Response: `{ "code": 0 }`
