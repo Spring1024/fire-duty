@@ -25,7 +25,14 @@ request.interceptors.request.use(
 // 响应拦截器 — 统一处理业务错误 / 401 / 网络错误
 request.interceptors.response.use(
   (response) => {
-    const { code, message, data } = response.data
+    const body = response.data
+    // 兼容两类非 Result 包裹的响应：
+    // 1. blob 文件流（responseType: 'blob'，如导出接口）
+    // 2. 未包裹 Result 的端点（如 GET /auth/me 直接返回 UserInfoDTO）
+    if (body instanceof Blob || body === null || typeof body !== 'object' || !('code' in body)) {
+      return { code: 0, message: 'success', data: body }
+    }
+    const { code, message, data } = body
     if (code === 0) {
       return { code, message, data }
     }

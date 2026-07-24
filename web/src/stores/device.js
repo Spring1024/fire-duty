@@ -21,7 +21,8 @@ export const useDeviceStore = defineStore('device', () => {
     loading.value = true
     try {
       const res = await getDevicesAPI(params)
-      deviceList.value = res.data?.list || []
+      // 后端返回 MyBatis-Plus IPage 结构（records），兼容契约文档的 list 字段
+      deviceList.value = res.data?.records || res.data?.list || []
       total.value = res.data?.total || 0
     } catch (err) {
       console.error('获取设备列表失败:', err)

@@ -51,18 +51,15 @@
         :row-class-name="taskTableRowClassName"
         v-loading="loading"
       >
-        <el-table-column prop="device" label="设备" min-width="180">
+        <el-table-column prop="title" label="任务名称" min-width="180" />
+        <el-table-column prop="templateName" label="检查模板" min-width="180" />
+        <el-table-column prop="location" label="位置" min-width="140" />
+        <el-table-column prop="assignedTo" label="责任人" width="100" />
+        <el-table-column prop="scheduledDate" label="计划时间" width="160">
           <template #default="{ row }">
-            <span class="device-cell">
-              <span class="device-code">{{ row.deviceCode }}</span>
-              {{ row.device }}
-            </span>
+            {{ formatDateTime(row.scheduledDate) }}
           </template>
         </el-table-column>
-        <el-table-column prop="template" label="检查模板" min-width="180" />
-        <el-table-column prop="location" label="位置" min-width="140" />
-        <el-table-column prop="assignee" label="责任人" width="100" />
-        <el-table-column prop="deadline" label="截止时间" width="150" />
         <el-table-column prop="status" label="状态" width="110">
           <template #default="{ row }">
             <el-tag :type="taskStatusTagType(row.status)" size="small" effect="dark">
@@ -166,8 +163,13 @@ async function handleDispatch() {
   }
 }
 
+function formatDateTime(v) {
+  if (!v) return '—'
+  return String(v).replace('T', ' ').slice(0, 16)
+}
+
 function viewTask(row) {
-  ElMessage.info(`查看任务: ${row.deviceCode} ${row.device}`)
+  ElMessage.info(`查看任务: ${row.title || row.id}`)
 }
 
 // ---------- Init ----------

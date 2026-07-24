@@ -15,7 +15,8 @@ export const useGridStore = defineStore('grid', () => {
     loading.value = true
     try {
       const res = await getGridsAPI()
-      gridList.value = res.data?.list || []
+      // 后端 GET /grids 直接返回网格数组（Result<List<Grid>>），非分页对象
+      gridList.value = Array.isArray(res.data) ? res.data : res.data?.list || []
     } catch (err) {
       console.error('获取网格列表失败:', err)
       gridList.value = []

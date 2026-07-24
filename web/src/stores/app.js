@@ -18,9 +18,7 @@ export const useAppStore = defineStore('app', {
   },
   actions: {
     async login(credentials) {
-      console.log("credentials", credentials)
       const res = await loginAPI(credentials)
-      console.log("res", res)
       const { token, refreshToken, user: userInfo } = res.data
 
       localStorage.setItem('token', token)
@@ -42,12 +40,15 @@ export const useAppStore = defineStore('app', {
     async fetchUserInfo() {
       try {
         const res = await getMeAPI()
+        const info = res.data || {}
+        // 后端 GET /auth/me 返回 UserInfoDTO：roles[] 为角色数组，无单值 role 字段
+        const roles = info.roles || []
         this.user = {
-          name: res.data?.name || '',
-          username: res.data?.username || '',
-          role: res.data?.role || '',
-          roles: res.data?.roles || [],
-          avatar: res.data?.avatar || '',
+          name: info.name || '',
+          username: info.username || '',
+          role: info.role || roles[0] || '',
+          roles,
+          avatar: info.avatar || '',
         }
       } catch (err) {
         console.error('获取用户信息失败:', err)

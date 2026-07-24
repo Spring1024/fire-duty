@@ -18,9 +18,19 @@ export const useStatisticsStore = defineStore('statistics', () => {
 
   async function fetchCompliance(params) {
     try {
-      console.log("params", params)
       const res = await getComplianceTrendAPI(params)
-      compliance.value = res.data || []
+      // 后端返回 ComplianceData {months: string[], rates: number[]}，归一化为模板使用的 {month, rate}[]
+      const raw = res.data
+      if (Array.isArray(raw)) {
+        compliance.value = raw
+      } else if (raw && Array.isArray(raw.months)) {
+        compliance.value = raw.months.map((month, i) => ({
+          month,
+          rate: raw.rates?.[i] ?? 0,
+        }))
+      } else {
+        compliance.value = []
+      }
     } catch (err) {
       console.error('获取合规率趋势失败:', err)
       compliance.value = []
@@ -30,7 +40,12 @@ export const useStatisticsStore = defineStore('statistics', () => {
   async function fetchHazardDistribution() {
     try {
       const res = await getHazardDistributionAPI()
-      hazardDistribution.value = res.data || []
+      // 后端返回 HazardItem {type, rate, color}，模板使用 {name, percentage, color}
+      hazardDistribution.value = (res.data || []).map((item) => ({
+        name: item.name ?? item.type ?? '',
+        percentage: item.percentage ?? item.rate ?? 0,
+        color: item.color || '',
+      }))
     } catch (err) {
       console.error('获取隐患分布失败:', err)
       hazardDistribution.value = []
@@ -41,9 +56,10 @@ export const useStatisticsStore = defineStore('statistics', () => {
     loading.value = true
     try {
       const res = await getStatisticsSummaryAPI()
+      // 后端返回 SummaryData {overallComplianceRate, topHazardType, topHazardRate}
       summary.value = {
-        maxHazardType: res.data?.maxHazardType ?? '',
-        maxHazardPercentage: res.data?.maxHazardPercentage ?? 0,
+        maxHazardType: res.data?.maxHazardType ?? res.data?.topHazardType ?? '',
+        maxHazardPercentage: res.data?.maxHazardPercentage ?? res.data?.topHazardRate ?? 0,
         overallComplianceRate: res.data?.overallComplianceRate ?? 0,
       }
     } catch (err) {
